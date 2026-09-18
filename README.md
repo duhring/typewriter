@@ -58,6 +58,7 @@ Clone on each Mac, run `bootstrap.sh` on each, and push and pull through git. Fi
 
 ## Making it yours
 
-- `CLAUDE.md` reads the owner name from `config/machine.local.json`. Edit the routing table to add or drop workflows.
+- `CLAUDE.md`, the balance checker, and the challenge tool read the owner name from `config/machine.local.json`. Edit the routing table to add or drop workflows.
+- Write `owners-inbox/brand-system.md`. Maven and Reed draft against it.
 - Tools resolve the repo root from their own location. Paths you may want to override are `PKA_RECORDINGS_DIR`, `PKA_VIDEO_STUDIO`, and `PKA_BACKUP_DIR` in `.env`.
 - Add a tool: drop a script in `tools/`, give it a docstring, add a line to `tools/README.md`.

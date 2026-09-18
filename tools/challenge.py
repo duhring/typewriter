@@ -65,6 +65,8 @@ _TOOLS_DIR = str(Path(__file__).resolve().parent)
 if _TOOLS_DIR not in sys.path:
     sys.path.insert(0, _TOOLS_DIR)
 
+from machine_role import load_machine  # noqa: E402
+OWNER = load_machine().get("owner") or "the owner"
 from challenge_corpus import (  # noqa: E402
     RETREAD_TIERS,
     Corpus,
@@ -164,7 +166,7 @@ def extract_claims(source_text: str, provider: str | None) -> list[dict]:
     """Pass 1 — discrete claims plus the verbatim quote backing each one."""
     raw: list[dict] = []
     for window in window_source(source_text):
-        prompt = f"""You are preparing John Duhring's raw interview material for editorial review.
+        prompt = f"""You are preparing {OWNER}'s raw interview material for editorial review.
 
 Pull out every DISTINCT claim this excerpt makes — a claim is one assertion the
 finished piece would stand behind. Not topics, not questions: assertions.
@@ -332,7 +334,7 @@ def render_batch(batch: list[dict]) -> str:
 
 
 def challenge_batch(batch: list[dict], provider: str | None) -> dict:
-    prompt = f"""You are the skeptic in John Duhring's editorial pipeline. Your job is to cull
+    prompt = f"""You are the skeptic in {OWNER}'s editorial pipeline. Your job is to cull
 weak claims BEFORE they get written into an outline, not to polish them after.
 
 For each claim you are given the owner's own words (when a verbatim quote was

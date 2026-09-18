@@ -47,7 +47,10 @@ ARCHIVE_DIRS = (
     ("brief", PKA_ROOT / "owners-inbox" / "briefs"),
     ("wiki", PKA_ROOT / "wiki"),
 )
-BRAND_SYSTEM = PKA_ROOT / "owners-inbox" / "brand-system-2026-04-25-pka-john-duhring.md"
+BRAND_SYSTEM = PKA_ROOT / "owners-inbox" / "brand-system.md"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from machine_role import load_machine  # noqa: E402
+OWNER = load_machine().get("owner") or "the owner"
 DEVELOPMENT_DIR = PKA_ROOT / "owners-inbox" / "development"
 WIKI_SKIP = {"README.md", "index.md", "_manifest.json", "stale-review.md"}
 
@@ -169,7 +172,7 @@ def llm_analysis(outline_text: str, overlaps: list[dict], provider: str | None) 
         f"{d['body'][:1500]}"
         for i, d in enumerate(overlaps[:5])
     )
-    prompt = f"""You are the editorial balance checker for John Duhring's publishing system.
+    prompt = f"""You are the editorial balance checker for {OWNER}'s publishing system.
 Compare a new video OUTLINE against excerpts of his PRIOR PUBLISHED work and his BRAND SYSTEM.
 
 Return strict JSON with this shape:

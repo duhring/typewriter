@@ -106,7 +106,7 @@ CONCEPT_SPECS = {
             "tone",
             "reed",
             "maven",
-            "john duhring",
+            "brand-system",
             "visual-identity",
         ],
     },

@@ -69,7 +69,7 @@ Every post makes an argument. Put the argument where the reader expects it.
 
 Before drafting any post, read the canonical brand-system document:
 
-- `owners-inbox/brand-system-2026-04-25-pka-john-duhring.md` (KB #117)
+- `owners-inbox/brand-system.md` (write yours; see README)
 
 Sections 2 (voice and tone) and 3 (recurring themes and lexicon) are the load-bearing reference for your work. Section 8 (anti-patterns) is the negative guardrail — review it before final pass to make sure the post does not drift into generic AI-blog or brand-consultant register.
 

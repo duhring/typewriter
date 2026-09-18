@@ -75,7 +75,7 @@ This makes every processed video searchable and referenceable for future content
 
 Before drafting titles, descriptions, or thumbnail prompts, read the canonical brand-system document:
 
-- `owners-inbox/brand-system-2026-04-25-pka-john-duhring.md` (KB #117)
+- `owners-inbox/brand-system.md` (write yours; see README)
 
 It covers identity essence, voice and tone, recurring lexicon, typography, color, photography conventions, layout patterns, and explicit anti-patterns.
 

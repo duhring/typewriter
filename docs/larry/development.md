@@ -136,7 +136,7 @@ It reports retread risk against the archive (blog, transcripts, briefs, wiki), c
 1. **Empowerment promise** (one or two sentences, up top)
 2. **Outline** (or a pointer to `outline.md`)
 3. **Packaging intent** — 2–3 working titles and a thumbnail concept, drafted Maven-style *before* recording so packaging shapes the talk instead of being retrofitted. Maven still produces the real package downstream from the transcript; this is intent, not the deliverable.
-4. **Visual identity constraints** — pull the relevant rules from `owners-inbox/brand-system-2026-04-25-pka-john-duhring.md` (colors, lower-third, thumbnail conventions) instead of deciding ad hoc per video. If the video gets a HyperFrames motion pass, seed the project's `motion_brief.json` from these same constraints.
+4. **Visual identity constraints** — pull the relevant rules from `owners-inbox/brand-system.md` (colors, lower-third, thumbnail conventions) instead of deciding ad hoc per video. If the video gets a HyperFrames motion pass, seed the project's `motion_brief.json` from these same constraints.
 5. **Balance decisions** — one line per accepted retread/contradiction finding and what the owner decided.
 6. **Stage log** (see below).
 

@@ -53,7 +53,7 @@ Use a stable `record_series` for recurring ledgers or families of records.
 
 Examples:
 
-- `sheila-checkbook-2026`
+- `household-checkbook-2026`
 - `sonoma-receipts-2026`
 - `utility-meters-2026`
 - `taxes-2025`
@@ -172,10 +172,10 @@ Preferred pattern:
 
 ## Pilot Workflows
 
-### Sheila Checkbook
+### Household Checkbook (example)
 
 - `record_class`: `financial-transaction`
-- `record_series`: `sheila-checkbook-2026`
+- `record_series`: `household-checkbook-2026`
 - `verification_status`: `previewed` or `confirmed`
 - `retention_class`: `7-years`
 - `record_state`: `active`
