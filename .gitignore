@@ -1,0 +1,59 @@
+# Secrets
+**/.env
+**/*.env.bak*
+
+# Virtualenvs and bytecode
+venv/
+discord-bridge/venv*/
+**/__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
+
+# Per-machine identity — never syncs between machines
+config/machine.local.json
+
+# Local SQLite database and volatile state
+data/pka.db
+data/pka.db-*
+data/pka.db.*
+data/*.db-journal
+data/tmp/
+data/gcal/
+data/gdocs/
+data/gmaps/
+data/gsheets/
+data/youtube/
+data/healthchecks/state/
+data/*.json
+data/*.log
+data/*.err
+data/journal-images/
+
+# Generated / binary media (sync out of band, not via git)
+owners-inbox/images/
+owners-inbox/thumbnails/
+owners-inbox/cuecam-assets/
+owners-inbox/presentations/**/*.cuecam/Media/
+owners-inbox/backups/
+video-studio/projects/**/raw/
+video-studio/projects/**/renders/
+video-studio/projects/**/hyperframes/assets/
+*.MOV
+*.mov
+*.mp4
+*.m4v
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.zip
+
+# LLM usage logs
+tools/*_usage.jsonl
+
+# Agent worktrees, scratch
+.claude/worktrees/
+tmp/
+.obsidian/workspace.json

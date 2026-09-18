@@ -1,0 +1,33 @@
+# PKA — Personal Knowledge Assistance
+
+PKA is a markdown-first, SQLite-backed personal operating system for its owner. An orchestrator (Larry) routes work to a small team of specialist agents. Durable state lives in files and `data/pka.db`; agents are stateless consumers of that spine.
+
+## Start here
+
+- [CLAUDE.md](CLAUDE.md) — Larry's constitution: routing rules, session start gate, workflow types, planning mode
+- [AGENTS.md](AGENTS.md) — Practical contract for coding agents: commands, file ownership, indexing rules, viewer/Sable boundaries
+- [team/roster.md](team/roster.md) — Active agents and their specialties
+- [docs/federation.md](docs/federation.md) — Multi-machine operating agreement (standalone peers, local DBs, git file sync)
+- [docs/larry/operations.md](docs/larry/operations.md) — Inbox, database, knowledge-base, viewer, session start/end
+
+## Reference docs (load on demand)
+
+- [docs/larry/journaling.md](docs/larry/journaling.md) — Journal entries, glossary, contacts
+- [docs/larry/google-tools.md](docs/larry/google-tools.md) — Calendar, Docs, Sheets, Maps, morning brief
+- [docs/larry/records.md](docs/larry/records.md) — Record registration, classification, retention
+- [docs/larry/youtube-writing.md](docs/larry/youtube-writing.md) — Maven and Reed packaging
+- [docs/larry/cuecam.md](docs/larry/cuecam.md) — CueCam presentation generation and recording intake
+- [docs/larry/llm-providers.md](docs/larry/llm-providers.md) — LLM provider router, interactive frontends, adding a provider
+- [docs/larry/video-production.md](docs/larry/video-production.md) — Manual-first video project states, approval gates, QC, private YouTube review, Substack, and metrics
+
+## Key directories
+
+- `owners-inbox/` — Owner-facing deliverables (final destination for finished work)
+- `owners-inbox/tasks/` — Canonical task records for active multi-step efforts
+- `team-inbox/` — Inputs from the owner; `team-inbox/discord/` for mobile prompts
+- `data/pka.db` — SQLite spine; mutate only through documented tools
+- `tools/` — Stable CLIs; prefer over ad hoc scripts
+- `wiki/` — Compiled context layer (Dreamer-maintained); prefer over raw KB searches when a page exists
+- `docs/larry/` — Procedure references; load only what the current task needs
+
+The source-of-truth, write-safety, indexing, and command contracts live in [AGENTS.md](AGENTS.md). Do not duplicate them here.

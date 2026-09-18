@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PKA Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #111113;
+    color: #e0e0e4;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    background: #1a1a1f;
+    border-bottom: 1px solid #2a2a30;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f0f0f4;
+    letter-spacing: -0.3px;
+  }
+
+  header h1 span { color: #6c8cff; }
+
+  .status {
+    font-size: 13px;
+    color: #888;
+  }
+  .status.ok { color: #4ade80; }
+  .status.err { color: #f87171; }
+
+  /* Tab navigation */
+  nav {
+    background: #16161a;
+    border-bottom: 1px solid #2a2a30;
+    display: flex;
+    gap: 0;
+    padding: 0 24px;
+    overflow-x: auto;
+  }
+
+  nav button {
+    background: none;
+    border: none;
+    color: #777;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  nav button:hover { color: #c0c0c8; }
+
+  nav button.active {
+    color: #f0f0f4;
+    border-bottom-color: #6c8cff;
+  }
+
+  /* Main container */
+  main {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 28px 24px;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .page-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #f0f0f4;
+    letter-spacing: -0.3px;
+  }
+
+  /* Dashboard summary cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .card {
+    background: #1e1e24;
+    border: 1px solid #2a2a30;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+    color: inherit;
+    font: inherit;
+    width: 100%;
+    display: block;
+  }
+
+  .card:hover {
+    border-color: #6c8cff;
+    transform: translateY(-1px);
+  }
+
+  .card:focus-visible,
+  tr.clickable:focus-visible,
+  .linked-contact-chip:focus-visible,
+  .back-btn:focus-visible {
+    outline: 2px solid #6c8cff;
+    outline-offset: 2px;
+  }
+
+  .card .count {
+    font-size: 32px;
+    font-weight: 700;
+    color: #f0f0f4;
+    line-height: 1.1;
+  }
+
+  .card .label {
+    font-size: 13px;
+    color: #888;
+    margin-top: 6px;
+  }
+
+  /* Section wrapper for tables */
+  .section {
+    background: #1e1e24;
+    border: 1px solid #2a2a30;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .section-header {
+    padding: 14px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    border-bottom: 1px solid #2a2a30;
+    color: #f0f0f4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .section-header .badge-count {
+    background: #28282e;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #888;
+    font-weight: 500;
+  }
+
+  .table-scroll { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 10px 18px;
+    font-weight: 600;
+    color: #999;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #2a2a30;
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 11px 18px;
+    border-bottom: 1px solid #222228;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(108, 140, 255, 0.04); }
+
+  .clickable { cursor: pointer; }
+  .clickable:hover td { color: #b0bfff; }
+
+  .empty {
+    padding: 48px 20px;
+    text-align: center;
+    color: #555;
+    font-size: 14px;
+  }
+
+  .date-col { color: #777; font-size: 13px; }
+
+  /* Tags */
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    background: #24243a;
+    color: #8899cc;
+    margin-right: 4px;
+    margin-bottom: 2px;
+  }
+
+  /* Status and priority badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge-green  { background: #16382a; color: #4ade80; }
+  .badge-yellow { background: #38321a; color: #facc15; }
+  .badge-red    { background: #3c1a1a; color: #f87171; }
+  .badge-blue   { background: #1a2a40; color: #60a5fa; }
+  .badge-purple { background: #2a1a3c; color: #a78bfa; }
+  .badge-gray   { background: #28282e; color: #999; }
+
+  /* Energy score badge */
+  .energy-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 28px;
+    text-align: center;
+  }
+  .energy-low    { background: #3c1a1a; color: #f87171; }
+  .energy-mid    { background: #38321a; color: #facc15; }
+  .energy-high   { background: #16382a; color: #4ade80; }
+
+  /* Detail views */
+  .detail-content {
+    padding: 20px;
+    white-space: pre-wrap;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #ddd;
+  }
+
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #24242c;
+    border: 1px solid #2a2a30;
+    border-radius: 8px;
+    color: #999;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+
+  .back-btn:hover { color: #f0f0f4; border-color: #6c8cff; }
+
+  .detail-meta {
+    font-size: 13px;
+    color: #777;
+    margin-bottom: 16px;
+  }
+
+  .detail-meta span { margin-right: 12px; }
+
+  /* Summary block in detail views */
+  .detail-summary {
+    background: #1a1a24;
+    border: 1px solid #2a2a36;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #b8b8c0;
+    font-style: italic;
+  }
+
+  .detail-summary-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #666;
+    margin-bottom: 6px;
+    font-style: normal;
+    font-weight: 600;
+  }
+
+  /* Image gallery in journal detail */
+  .image-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    padding: 16px 20px;
+  }
+
+  .image-gallery .img-card {
+    background: #16161a;
+    border: 1px solid #2a2a30;
+    border-radius: 8px;
+    overflow: hidden;
+    text-align: center;
+  }
+
+  .image-gallery .img-card .img-path {
+    padding: 10px 12px;
+    font-size: 12px;
+    color: #888;
+    word-break: break-all;
+  }
+
+  .image-gallery .img-card .img-caption {
+    padding: 6px 12px 10px;
+    font-size: 13px;
+    color: #aaa;
+  }
+
+  /* Linked contacts in journal detail */
+  .linked-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 20px;
+  }
+
+  .linked-contact-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 16px;
+    background: #1a2a40;
+    color: #60a5fa;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .linked-contact-chip:hover {
+    background: #243450;
+    color: #80b5ff;
+  }
+
+  /* Entry count badge on contact rows */
+  .entry-count-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #24243a;
+    color: #8899cc;
+    margin-left: 4px;
+  }
+
+  /* Clickable journal links in contact detail */
+  .journal-link {
+    cursor: pointer;
+    color: #6c8cff;
+    transition: color 0.15s;
+  }
+  .journal-link:hover { color: #a0b4ff; }
+
+  /* Loading and error */
+  #loading-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-size: 15px;
+    color: #777;
+  }
+
+  #error-screen {
+    display: none;
+    text-align: center;
+    padding: 80px 24px;
+  }
+
+  #error-screen h2 { color: #f87171; margin-bottom: 12px; font-size: 18px; }
+  #error-screen p { color: #777; font-size: 14px; max-width: 540px; margin: 0 auto; line-height: 1.7; }
+  #error-screen code { background: #24242c; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    header { padding: 12px 16px; }
+    nav { padding: 0 8px; }
+    nav button { padding: 10px 12px; font-size: 13px; }
+    main { padding: 16px; }
+    .cards { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .card { padding: 14px; }
+    .card .count { font-size: 26px; }
+    thead th, tbody td { padding: 9px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading-screen" role="status" aria-live="polite">Loading PKA database...</div>
+
+<div id="error-screen" role="alert">
+  <h2>Could not load database</h2>
+  <p>Make sure <code>data/pka.db</code> exists. Serve this file via a local server:<br>
+  <code>python3 -m http.server 8000</code><br>
+  then open <code>http://localhost:8000/viewer.html</code></p>
+</div>
+
+<div id="app" style="display:none">
+  <header>
+    <h1>P<span>KA</span> Dashboard</h1>
+    <span class="status" id="dbStatus" role="status" aria-live="polite"></span>
+  </header>
+
+  <nav id="nav" role="tablist" aria-label="PKA sections">
+    <button class="active" id="tabbtn-dashboard" role="tab" aria-controls="tab-dashboard" aria-selected="true" data-tab="dashboard">Dashboard</button>
+    <button id="tabbtn-knowledge" role="tab" aria-controls="tab-knowledge" aria-selected="false" tabindex="-1" data-tab="knowledge">Knowledge</button>
+    <button id="tabbtn-journal" role="tab" aria-controls="tab-journal" aria-selected="false" tabindex="-1" data-tab="journal">Journal</button>
+    <button id="tabbtn-contacts" role="tab" aria-controls="tab-contacts" aria-selected="false" tabindex="-1" data-tab="contacts">Contacts</button>
+    <button id="tabbtn-meetings" role="tab" aria-controls="tab-meetings" aria-selected="false" tabindex="-1" data-tab="meetings">Meetings</button>
+    <button id="tabbtn-projects" role="tab" aria-controls="tab-projects" aria-selected="false" tabindex="-1" data-tab="projects">Projects</button>
+    <button id="tabbtn-files" role="tab" aria-controls="tab-files" aria-selected="false" tabindex="-1" data-tab="files">Files</button>
+    <button id="tabbtn-glossary" role="tab" aria-controls="tab-glossary" aria-selected="false" tabindex="-1" data-tab="glossary">Glossary</button>
+  </nav>
+
+  <main id="main">
+    <div class="tab-panel active" id="tab-dashboard"  role="tabpanel" aria-labelledby="tabbtn-dashboard" tabindex="0"></div>
+    <div class="tab-panel" id="tab-knowledge" role="tabpanel" aria-labelledby="tabbtn-knowledge" tabindex="0" hidden></div>
+    <div class="tab-panel" id="tab-journal"   role="tabpanel" aria-labelledby="tabbtn-journal"   tabindex="0" hidden></div>
+    <div class="tab-panel" id="tab-contacts"  role="tabpanel" aria-labelledby="tabbtn-contacts"  tabindex="0" hidden></div>
+    <div class="tab-panel" id="tab-meetings"  role="tabpanel" aria-labelledby="tabbtn-meetings"  tabindex="0" hidden></div>
+    <div class="tab-panel" id="tab-projects"  role="tabpanel" aria-labelledby="tabbtn-projects"  tabindex="0" hidden></div>
+    <div class="tab-panel" id="tab-files"     role="tabpanel" aria-labelledby="tabbtn-files"     tabindex="0" hidden></div>
+    <div class="tab-panel" id="tab-glossary"  role="tabpanel" aria-labelledby="tabbtn-glossary"  tabindex="0" hidden></div>
+  </main>
+</div>
+
+<script src="https://sql.js.org/dist/sql-wasm.js"></script>
+<script>
+let db;
+let currentTab = 'dashboard';
+
+// -- Initialization ----------------------------------------------------------
+
+async function initApp() {
+  try {
+    const SQL = await initSqlJs({
+      locateFile: file => 'https://sql.js.org/dist/' + file
+    });
+    const resp = await fetch('data/pka.db');
+    if (!resp.ok) throw new Error('Could not fetch data/pka.db (HTTP ' + resp.status + ')');
+    const buf = await resp.arrayBuffer();
+    db = new SQL.Database(new Uint8Array(buf));
+
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('dbStatus').textContent = 'Connected';
+    document.getElementById('dbStatus').className = 'status ok';
+
+    renderAll();
+  } catch (e) {
+    console.error(e);
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('error-screen').style.display = 'block';
+  }
+}
+
+// -- Database helpers --------------------------------------------------------
+
+function query(sql) {
+  try {
+    const result = db.exec(sql);
+    if (!result.length) return [];
+    const cols = result[0].columns;
+    return result[0].values.map(row => {
+      const obj = {};
+      cols.forEach((c, i) => obj[c] = row[i]);
+      return obj;
+    });
+  } catch (e) {
+    console.warn('Query failed:', sql, e.message);
+    return [];
+  }
+}
+
+function count(table) {
+  const r = query('SELECT COUNT(*) AS n FROM ' + table);
+  return r.length ? r[0].n : 0;
+}
+
+function tableExists(table) {
+  const r = query("SELECT name FROM sqlite_master WHERE type='table' AND name='" + table + "'");
+  return r.length > 0;
+}
+
+// -- Formatting helpers ------------------------------------------------------
+
+function esc(val) {
+  if (val == null) return '';
+  return String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function trunc(val, len) {
+  if (val == null) return '';
+  const s = String(val);
+  return s.length > len ? s.slice(0, len) + '...' : s;
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  try {
+    const dt = new Date(d.includes('T') || d.includes(' ') ? d : d + 'T00:00:00');
+    if (isNaN(dt)) return esc(d);
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch (_) { return esc(d); }
+}
+
+function renderTags(t) {
+  if (!t) return '';
+  return t.split(',').map(s => '<span class="tag">' + esc(s.trim()) + '</span>').join(' ');
+}
+
+function statusBadge(val) {
+  if (!val) return '<span class="badge badge-gray">--</span>';
+  const v = String(val).toLowerCase();
+  if (['active', 'completed', 'done'].includes(v)) return '<span class="badge badge-green">' + esc(val) + '</span>';
+  if (['in progress', 'in_progress', 'pending', 'planning'].includes(v)) return '<span class="badge badge-yellow">' + esc(val) + '</span>';
+  if (['blocked', 'cancelled', 'overdue'].includes(v)) return '<span class="badge badge-red">' + esc(val) + '</span>';
+  if (['paused', 'on hold'].includes(v)) return '<span class="badge badge-purple">' + esc(val) + '</span>';
+  return '<span class="badge badge-gray">' + esc(val) + '</span>';
+}
+
+function priorityBadge(val) {
+  if (!val) return '';
+  const v = String(val).toLowerCase();
+  if (['high', 'critical', 'urgent'].includes(v)) return '<span class="badge badge-red">' + esc(val) + '</span>';
+  if (v === 'medium') return '<span class="badge badge-yellow">' + esc(val) + '</span>';
+  if (v === 'low') return '<span class="badge badge-green">' + esc(val) + '</span>';
+  return '<span class="badge badge-gray">' + esc(val) + '</span>';
+}
+
+function moodBadge(val) {
+  if (!val) return '';
+  const v = String(val).toLowerCase();
+  if (['excited', 'happy', 'great', 'good', 'positive'].includes(v)) return '<span class="badge badge-green">' + esc(val) + '</span>';
+  if (['neutral', 'okay', 'calm', 'reflective'].includes(v)) return '<span class="badge badge-blue">' + esc(val) + '</span>';
+  if (['stressed', 'anxious', 'tired', 'frustrated', 'sad'].includes(v)) return '<span class="badge badge-red">' + esc(val) + '</span>';
+  return '<span class="badge badge-gray">' + esc(val) + '</span>';
+}
+
+function energyBadge(val) {
+  if (val == null || val === '') return '';
+  const n = Number(val);
+  if (isNaN(n)) return '';
+  let cls = 'energy-low';
+  if (n >= 4 && n <= 6) cls = 'energy-mid';
+  else if (n >= 7) cls = 'energy-high';
+  return '<span class="energy-badge ' + cls + '">' + n + '</span>';
+}
+
+// -- Tab navigation ----------------------------------------------------------
+
+function setActiveTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('#nav button').forEach(b => {
+    const isActive = b.dataset.tab === tab;
+    b.classList.toggle('active', isActive);
+    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    b.setAttribute('tabindex', isActive ? '0' : '-1');
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => {
+    const isActive = p.id === 'tab-' + tab;
+    p.classList.toggle('active', isActive);
+    if (isActive) p.removeAttribute('hidden'); else p.setAttribute('hidden', '');
+  });
+}
+
+document.getElementById('nav').addEventListener('click', function(e) {
+  const btn = e.target.closest('button[data-tab]');
+  if (!btn) return;
+  setActiveTab(btn.dataset.tab);
+});
+
+document.getElementById('nav').addEventListener('keydown', function(e) {
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight' && e.key !== 'Home' && e.key !== 'End') return;
+  const tabs = Array.from(document.querySelectorAll('#nav button[role="tab"]'));
+  const idx = tabs.findIndex(b => b.dataset.tab === currentTab);
+  let next = idx;
+  if (e.key === 'ArrowLeft')  next = (idx - 1 + tabs.length) % tabs.length;
+  if (e.key === 'ArrowRight') next = (idx + 1) % tabs.length;
+  if (e.key === 'Home')       next = 0;
+  if (e.key === 'End')        next = tabs.length - 1;
+  e.preventDefault();
+  setActiveTab(tabs[next].dataset.tab);
+  tabs[next].focus();
+});
+
+// -- Delegated actions on main ----------------------------------------------
+
+const ACTION_HANDLERS = {
+  tab:       el => setActiveTab(el.dataset.tab),
+  journal:   el => showJournalDetail(Number(el.dataset.id)),
+  contact:   el => showContactDetail(Number(el.dataset.id)),
+  knowledge: el => showKnowledgeDetail(Number(el.dataset.id)),
+  meeting:   el => showMeetingDetail(Number(el.dataset.id)),
+  project:   el => showProjectDetail(Number(el.dataset.id)),
+  back: el => {
+    const map = { journal: renderJournal, contacts: renderContacts, knowledge: renderKnowledge, projects: renderProjects, meetings: renderMeetings };
+    const fn = map[el.dataset.back];
+    if (fn) fn();
+  },
+};
+
+function handleAction(e) {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const handler = ACTION_HANDLERS[el.dataset.action];
+  if (!handler) return;
+  e.preventDefault();
+  handler(el);
+}
+
+document.getElementById('main').addEventListener('click', handleAction);
+document.getElementById('main').addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  handleAction(e);
+});
+
+// -- Render everything -------------------------------------------------------
+
+function renderAll() {
+  renderDashboard();
+  renderKnowledge();
+  renderJournal();
+  renderContacts();
+  renderMeetings();
+  renderProjects();
+  renderFiles();
+  renderGlossary();
+}
+
+// -- Dashboard ---------------------------------------------------------------
+
+function renderDashboard() {
+  const glossaryCount = tableExists('glossary') ? count('glossary') : 0;
+  const imagesCount = tableExists('images') ? count('images') : 0;
+
+  const counts = [
+    { key: 'journal',   label: 'Journal Entries', n: count('journal_entries') },
+    { key: 'contacts',  label: 'Contacts',        n: count('contacts') },
+    { key: 'files',     label: 'Files',            n: count('files') },
+    { key: 'projects',  label: 'Projects',         n: count('projects') },
+    { key: 'meetings',  label: 'Meetings',         n: count('meetings') },
+    { key: 'knowledge', label: 'Knowledge Base',   n: count('knowledge_base') },
+    { key: 'glossary',  label: 'Glossary',         n: glossaryCount },
+    { key: null,        label: 'Images',           n: imagesCount },
+  ];
+
+  const recentJournal = query('SELECT id, title, mood, created_at FROM journal_entries ORDER BY created_at DESC LIMIT 5');
+  const recentContacts = query('SELECT id, name, company, country FROM contacts ORDER BY created_at DESC LIMIT 5');
+
+  let html = '<h1 class="page-title">Dashboard</h1>';
+  html += '<div class="cards">';
+  counts.forEach(c => {
+    if (c.key) {
+      html += '<button type="button" class="card" data-action="tab" data-tab="' + c.key + '" aria-label="' + esc(c.label) + ': ' + c.n + '">';
+    } else {
+      html += '<div class="card" role="group" aria-label="' + esc(c.label) + ': ' + c.n + '">';
+    }
+    html += '<div class="count">' + c.n + '</div>';
+    html += '<div class="label">' + esc(c.label) + '</div>';
+    html += c.key ? '</button>' : '</div>';
+  });
+  html += '</div>';
+
+  // Recent journal
+  html += '<div class="section">';
+  html += '<div class="section-header">Recent Journal Entries <span class="badge-count">' + counts[0].n + ' total</span></div>';
+  if (recentJournal.length) {
+    html += '<div class="table-scroll"><table><thead><tr><th>Title</th><th>Mood</th><th>Date</th></tr></thead><tbody>';
+    recentJournal.forEach(j => {
+      html += '<tr class="clickable" tabindex="0" role="button" data-action="journal" data-id="' + j.id + '">';
+      html += '<td>' + esc(trunc(j.title, 60)) + '</td>';
+      html += '<td>' + moodBadge(j.mood) + '</td>';
+      html += '<td class="date-col">' + fmtDate(j.created_at) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="empty">No journal entries yet.</div>';
+  }
+  html += '</div>';
+
+  // Recent contacts
+  html += '<div class="section">';
+  html += '<div class="section-header">Recent Contacts <span class="badge-count">' + counts[1].n + ' total</span></div>';
+  if (recentContacts.length) {
+    html += '<div class="table-scroll"><table><thead><tr><th>Name</th><th>Company</th><th>Country</th></tr></thead><tbody>';
+    recentContacts.forEach(c => {
+      html += '<tr class="clickable" tabindex="0" role="button" data-action="contact" data-id="' + c.id + '">';
+      html += '<td>' + esc(c.name) + '</td>';
+      html += '<td>' + esc(c.company || '--') + '</td>';
+      html += '<td>' + esc(c.country || '--') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="empty">No contacts yet.</div>';
+  }
+  html += '</div>';
+
+  document.getElementById('tab-dashboard').innerHTML = html;
+}
+
+// -- Knowledge Base ----------------------------------------------------------
+
+function renderKnowledge() {
+  const rows = query('SELECT id, title, category, tags, source_file, created_at FROM knowledge_base ORDER BY created_at DESC');
+  let html = '<h1 class="page-title">Knowledge Base</h1>';
+  html += '<div class="section">';
+  html += '<div class="section-header">All Entries <span class="badge-count">' + rows.length + '</span></div>';
+  if (rows.length) {
+    html += '<div class="table-scroll"><table><thead><tr><th>Title</th><th>Category</th><th>Tags</th><th>Source</th><th>Created</th></tr></thead><tbody>';
+    rows.forEach(k => {
+      html += '<tr class="clickable" tabindex="0" role="button" data-action="knowledge" data-id="' + k.id + '">';
+      html += '<td>' + esc(trunc(k.title, 50)) + '</td>';
+      html += '<td>' + (k.category ? '<span class="badge badge-blue">' + esc(k.category) + '</span>' : '') + '</td>';
+      html += '<td>' + renderTags(k.tags) + '</td>';
+      html += '<td>' + esc(trunc(k.source_file, 30)) + '</td>';
+      html += '<td class="date-col">' + fmtDate(k.created_at) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="empty">No records yet.</div>';
+  }
+  html += '</div>';
+  document.getElementById('tab-knowledge').innerHTML = html;
+}
+
+// -- Journal -----------------------------------------------------------------
+
+function renderJournal() {
+  const rows = query('SELECT id, title, summary, mood, energy_score, tags, created_at FROM journal_entries ORDER BY created_at DESC');
+  let html = '<h1 class="page-title">Journal</h1>';
+  html += '<div class="section">';
+  html += '<div class="section-header">All Entries <span class="badge-count">' + rows.length + '</span></div>';
+  if (rows.length) {
+    html += '<div class="table-scroll"><table><thead><tr><th>Title</th><th>Mood / Energy</th><th>Summary</th><th>Tags</th><th>Created</th></tr></thead><tbody>';
+    rows.forEach(j => {
+      html += '<tr class="clickable" tabindex="0" role="button" data-action="journal" data-id="' + j.id + '">';
+      html += '<td>' + esc(trunc(j.title, 50)) + '</td>';
+      html += '<td>' + moodBadge(j.mood) + ' ' + energyBadge(j.energy_score) + '</td>';
+      html += '<td>' + esc(trunc(j.summary, 60)) + '</td>';
+      html += '<td>' + renderTags(j.tags) + '</td>';
+      html += '<td class="date-col">' + fmtDate(j.created_at) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="empty">No records yet.</div>';
+  }
+  html += '</div>';
+  document.getElementById('tab-journal').innerHTML = html;
+}
+
+// -- Contacts ----------------------------------------------------------------
+
+function renderContacts() {
+  // Get entry counts per contact
+  const entryCountMap = {};
+  if (tableExists('entry_contacts')) {
+    const ecRows = query('SELECT contact_id, COUNT(*) AS cnt FROM entry_contacts GROUP BY contact_id');
+    ecRows.forEach(r => { entryCountMap[r.contact_id] = r.cnt; });
+  }
+
+  const rows = query('SELECT id, name, email, phone, company, country, role, summary FROM contacts ORDER BY name');
+  let html = '<h1 class="page-title">Contacts</h1>';
+  html += '<div class="section">';
+  html += '<div class="section-header">All Contacts <span class="badge-count">' + rows.length + '</span></div>';
+  if (rows.length) {
+    html += '<div class="table-scroll"><table><thead><tr><th>Name</th><th>Role</th><th>Summary</th><th>Company</th><th>Country</th><th>Email</th></tr></thead><tbody>';
+    rows.forEach(c => {
+      const ec = entryCountMap[c.id] || 0;
+      html += '<tr class="clickable" tabindex="0" role="button" data-action="contact" data-id="' + c.id + '">';
+      html += '<td>' + esc(c.name);
+      if (ec > 0) html += ' <span class="entry-count-badge">' + ec + '</span>';
+      html += '</td>';
+      html += '<td>' + esc(c.role || '--') + '</td>';
+      html += '<td>' + esc(trunc(c.summary, 40)) + '</td>';
+      html += '<td>' + esc(c.company || '--') + '</td>';
+      html += '<td>' + esc(c.country || '--') + '</td>';
+      html += '<td>' + esc(c.email || '--') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="empty">No records yet.</div>';
+  }
+  html += '</div>';
+  document.getElementById('tab-contacts').innerHTML = html;
+}
+
+// -- Meetings ----------------------------------------------------------------
+
+function renderMeetings() {
+  const rows = query('SELECT id, title, date, attendees, action_items, created_at FROM meetings ORDER BY date DESC, created_at DESC');
+  let html = '<h1 class="page-title">Meetings</h1>';
+  html += '<div class="section">';
+  html += '<div class="section-header">All Meetings <span class="badge-count">' + rows.length + '</span></div>';
+  if (rows.length) {
+    html += '<div class="table-scroll"><table><thead><tr><th>Title</th><th>Date</th><th>Attendees</th><th>Action Items</th></tr></thead><tbody>';
+    rows.forEach(m => {
+      html += '<tr class="clickable" tabindex="0" role="button" data-action="meeting" data-id="' + m.id + '">';
+      html += '<td>' + esc(trunc(m.title, 50)) + '</td>';
+      html += '<td class="date-col">' + fmtDate(m.date) + '</td>';
+      html += '<td>' + esc(trunc(m.attendees, 40)) + '</td>';
+      html += '<td>' + esc(trunc(m.action_items, 50)) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="empty">No records yet.</div>';
+  }
+  html += '</div>';
+  document.getElementById('tab-meetings').innerHTML = html;
+}
+
+// -- Projects ----------------------------------------------------------------
+
+function renderProjects() {
+  const rows = query('SELECT id, name, status, priority, start_date, due_date, created_at FROM projects ORDER BY created_at DESC');
+  let html = '<h1 class="page-title">Projects</h1>';
+  html += '<div class="section">';
+  html += '<div class="section-header">All Projects <span class="badge-count">' + rows.length + '</span></div>';
+  if (rows.length) {
+    html += '<div class="table-scroll"><table><thead><tr><th>Name</th><th>Status</th><th>Priority</th><th>Start</th><th>Due</th></tr></thead><tbody>';
+    rows.forEach(p => {
+      html += '<tr class="clickable" tabindex="0" role="button" data-action="project" data-id="' + p.id + '">';
+      html += '<td>' + esc(trunc(p.name, 50)) + '</td>';
+      html += '<td>' + statusBadge(p.status) + '</td>';
+      html += '<td>' + priorityBadge(p.priority) + '</td>';
+      html += '<td class="date-col">' + fmtDate(p.start_date) + '</td>';
+      html += '<td class="date-col">' + fmtDate(p.due_date) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="empty">No records yet.</div>';
+  }
+  html += '</div>';
+  document.getElementById('tab-projects').innerHTML = html;
+}
+
+// -- Files -------------------------------------------------------------------
+
+function renderFiles() {
+  const rows = query('SELECT id, filename, filepath, category, description, file_type, created_at FROM files ORDER BY created_at DESC');
+  let html = '<h1 class="page-title">Files</h1>';
+  html += '<div class="section">';
+  html += '<div class="section-header">All Files <span class="badge-count">' + rows.length + '</span></div>';
+  if (rows.length) {
+    html += '<div class="table-scroll"><table><thead><tr><th>Filename</th><th>Category</th><th>Type</th><th>Description</th><th>Created</th></tr></thead><tbody>';
+    rows.forEach(f => {
+      html += '<tr>';
+      html += '<td>' + esc(trunc(f.filename, 40)) + '</td>';
+      html += '<td>' + (f.category ? '<span class="badge badge-blue">' + esc(f.category) + '</span>' : '') + '</td>';
+      html += '<td>' + (f.file_type ? '<span class="badge badge-gray">' + esc(f.file_type) + '</span>' : '') + '</td>';
+      html += '<td>' + esc(trunc(f.description, 50)) + '</td>';
+      html += '<td class="date-col">' + fmtDate(f.created_at) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="empty">No records yet.</div>';
+  }
+  html += '</div>';
+  document.getElementById('tab-files').innerHTML = html;
+}
+
+// -- Glossary ----------------------------------------------------------------
+
+function renderGlossary() {
+  if (!tableExists('glossary')) {
+    document.getElementById('tab-glossary').innerHTML =
+      '<h1 class="page-title">Glossary</h1>' +
+      '<div class="section"><div class="empty">Glossary table not found in database.</div></div>';
+    return;
+  }
+  const rows = query('SELECT id, term, correction, context, created_at FROM glossary ORDER BY created_at DESC');
+  let html = '<h1 class="page-title">Glossary</h1>';
+  html += '<div class="section">';
+  html += '<div class="section-header">Voice Dictation Corrections <span class="badge-count">' + rows.length + '</span></div>';
+  if (rows.length) {
+    html += '<div class="table-scroll"><table><thead><tr><th>Term</th><th>Correction</th><th>Context</th><th>Date Added</th></tr></thead><tbody>';
+    rows.forEach(g => {
+      html += '<tr>';
+      html += '<td>' + esc(g.term) + '</td>';
+      html += '<td><strong>' + esc(g.correction) + '</strong></td>';
+      html += '<td>' + esc(trunc(g.context, 60)) + '</td>';
+      html += '<td class="date-col">' + fmtDate(g.created_at) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  } else {
+    html += '<div class="empty">No glossary entries yet.</div>';
+  }
+  html += '</div>';
+  document.getElementById('tab-glossary').innerHTML = html;
+}
+
+// -- Detail views ------------------------------------------------------------
+
+function switchTab(tab) {
+  setActiveTab(tab);
+}
+
+function showJournalDetail(id) {
+  const rows = query('SELECT * FROM journal_entries WHERE id = ' + id);
+  if (!rows.length) return;
+  const j = rows[0];
+
+  // Linked images
+  const images = tableExists('images') ? query('SELECT * FROM images WHERE entry_id = ' + id) : [];
+
+  // Linked contacts
+  const linkedContacts = tableExists('entry_contacts')
+    ? query('SELECT c.id, c.name FROM entry_contacts ec JOIN contacts c ON ec.contact_id = c.id WHERE ec.entry_id = ' + id)
+    : [];
+
+  const panel = document.getElementById('tab-journal');
+  let html = '<button type="button" class="back-btn" data-action="back" data-back="journal" aria-label="Back to Journal">&#8592; Back to Journal</button>';
+  html += '<h1 class="page-title">' + esc(j.title) + '</h1>';
+
+  // Summary block
+  if (j.summary) {
+    html += '<div class="detail-summary"><div class="detail-summary-label">Summary</div>' + esc(j.summary) + '</div>';
+  }
+
+  html += '<div class="detail-meta">' + moodBadge(j.mood) + ' ' + energyBadge(j.energy_score) + ' <span>' + fmtDate(j.created_at) + '</span></div>';
+  if (j.tags) html += '<div style="margin-bottom:16px">' + renderTags(j.tags) + '</div>';
+
+  // Linked contacts
+  if (linkedContacts.length) {
+    html += '<div class="section"><div class="section-header">People Mentioned</div>';
+    html += '<div class="linked-contacts">';
+    linkedContacts.forEach(c => {
+      html += '<button type="button" class="linked-contact-chip" data-action="contact" data-id="' + c.id + '">' + esc(c.name) + '</button>';
+    });
+    html += '</div></div>';
+  }
+
+  // Content
+  html += '<div class="section"><div class="section-header">Entry</div><div class="detail-content">' + esc(j.content || 'No content.') + '</div></div>';
+
+  // Images
+  if (images.length) {
+    html += '<div class="section"><div class="section-header">Images <span class="badge-count">' + images.length + '</span></div>';
+    html += '<div class="image-gallery">';
+    images.forEach(img => {
+      html += '<div class="img-card">';
+      html += '<div class="img-path">' + esc(img.file_path) + '</div>';
+      if (img.caption) html += '<div class="img-caption">' + esc(img.caption) + '</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
+  panel.innerHTML = html;
+  switchTab('journal');
+}
+
+function showContactDetail(id) {
+  const rows = query('SELECT * FROM contacts WHERE id = ' + id);
+  if (!rows.length) return;
+  const c = rows[0];
+
+  // Journal mentions via entry_contacts
+  const journalMentions = tableExists('entry_contacts')
+    ? query('SELECT je.id, je.title, je.mood, je.created_at FROM entry_contacts ec JOIN journal_entries je ON ec.entry_id = je.id WHERE ec.contact_id = ' + id + ' ORDER BY je.created_at DESC')
+    : [];
+
+  const panel = document.getElementById('tab-contacts');
+  let html = '<button type="button" class="back-btn" data-action="back" data-back="contacts" aria-label="Back to Contacts">&#8592; Back to Contacts</button>';
+  html += '<h1 class="page-title">' + esc(c.name) + '</h1>';
+  html += '<div class="section"><div class="table-scroll"><table>';
+  if (c.summary) {
+    html += '<tr><td style="color:#777;width:120px">Relationship</td><td>' + esc(c.summary) + '</td></tr>';
+  }
+  html += '<tr><td style="color:#777;width:120px">Role</td><td>' + esc(c.role || '--') + '</td></tr>';
+  html += '<tr><td style="color:#777">Company</td><td>' + esc(c.company || '--') + '</td></tr>';
+  html += '<tr><td style="color:#777">Country</td><td>' + esc(c.country || '--') + '</td></tr>';
+  html += '<tr><td style="color:#777">Email</td><td>' + esc(c.email || '--') + '</td></tr>';
+  html += '<tr><td style="color:#777">Phone</td><td>' + esc(c.phone || '--') + '</td></tr>';
+  html += '<tr><td style="color:#777">Notes</td><td>' + esc(c.notes || '--') + '</td></tr>';
+  html += '<tr><td style="color:#777">Added</td><td class="date-col">' + fmtDate(c.created_at) + '</td></tr>';
+  html += '</table></div></div>';
+
+  // Journal mentions section
+  if (journalMentions.length) {
+    html += '<div class="section"><div class="section-header">Journal Mentions <span class="badge-count">' + journalMentions.length + '</span></div>';
+    html += '<div class="table-scroll"><table><thead><tr><th>Title</th><th>Mood</th><th>Date</th></tr></thead><tbody>';
+    journalMentions.forEach(je => {
+      html += '<tr class="clickable" tabindex="0" role="button" data-action="journal" data-id="' + je.id + '">';
+      html += '<td class="journal-link">' + esc(trunc(je.title, 60)) + '</td>';
+      html += '<td>' + moodBadge(je.mood) + '</td>';
+      html += '<td class="date-col">' + fmtDate(je.created_at) + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+
+  panel.innerHTML = html;
+  switchTab('contacts');
+}
+
+function showKnowledgeDetail(id) {
+  const rows = query('SELECT * FROM knowledge_base WHERE id = ' + id);
+  if (!rows.length) return;
+  const k = rows[0];
+  const panel = document.getElementById('tab-knowledge');
+  panel.innerHTML = '<button type="button" class="back-btn" data-action="back" data-back="knowledge" aria-label="Back to Knowledge">&#8592; Back to Knowledge</button>' +
+    '<h1 class="page-title">' + esc(k.title) + '</h1>' +
+    '<div class="detail-meta">' +
+    (k.category ? '<span class="badge badge-blue">' + esc(k.category) + '</span> ' : '') +
+    '<span>' + fmtDate(k.created_at) + '</span></div>' +
+    (k.tags ? '<div style="margin-bottom:16px">' + renderTags(k.tags) + '</div>' : '') +
+    (k.source_file ? '<div style="margin-bottom:16px;font-size:13px;color:#777">Source: ' + esc(k.source_file) + '</div>' : '') +
+    '<div class="section"><div class="detail-content">' + esc(k.content || 'No content.') + '</div></div>';
+  switchTab('knowledge');
+}
+
+function showProjectDetail(id) {
+  const rows = query('SELECT * FROM projects WHERE id = ' + id);
+  if (!rows.length) return;
+  const p = rows[0];
+  const panel = document.getElementById('tab-projects');
+  panel.innerHTML = '<button type="button" class="back-btn" data-action="back" data-back="projects" aria-label="Back to Projects">&#8592; Back to Projects</button>' +
+    '<h1 class="page-title">' + esc(p.name) + '</h1>' +
+    '<div class="detail-meta">' + statusBadge(p.status) + ' ' + priorityBadge(p.priority) + '</div>' +
+    '<div class="section"><div class="section-header">Description</div><div class="detail-content">' + esc(p.description || 'No description.') + '</div></div>' +
+    '<div class="section"><div class="table-scroll"><table>' +
+    '<tr><td style="color:#777;width:120px">Start</td><td class="date-col">' + (fmtDate(p.start_date) || '--') + '</td></tr>' +
+    '<tr><td style="color:#777">Due</td><td class="date-col">' + (fmtDate(p.due_date) || '--') + '</td></tr>' +
+    '<tr><td style="color:#777">Created</td><td class="date-col">' + fmtDate(p.created_at) + '</td></tr>' +
+    '</table></div></div>';
+  switchTab('projects');
+}
+
+function showMeetingDetail(id) {
+  const rows = query('SELECT * FROM meetings WHERE id = ' + id);
+  if (!rows.length) return;
+  const m = rows[0];
+  const panel = document.getElementById('tab-meetings');
+  panel.innerHTML = '<button type="button" class="back-btn" data-action="back" data-back="meetings" aria-label="Back to Meetings">&#8592; Back to Meetings</button>' +
+    '<h1 class="page-title">' + esc(m.title) + '</h1>' +
+    '<div class="detail-meta"><span>' + fmtDate(m.date) + '</span> <span>' + esc(m.attendees || 'No attendees listed') + '</span></div>' +
+    '<div class="section"><div class="section-header">Notes</div><div class="detail-content">' + esc(m.notes || 'No notes.') + '</div></div>' +
+    (m.action_items ? '<div class="section"><div class="section-header">Action Items</div><div class="detail-content">' + esc(m.action_items) + '</div></div>' : '');
+  switchTab('meetings');
+}
+
+// -- window.PKA read-only API -----------------------------------------------
+//
+// Stable surface for browser agents and external tooling. READ-ONLY by design:
+// nothing here mutates data/pka.db or writes files. Mutations must go through
+// the documented CLI tools (see AGENTS.md). Adding write paths to this object
+// requires an explicit owner decision.
+
+const TAB_IDS = ['dashboard','knowledge','journal','contacts','meetings','projects','files','glossary'];
+
+const RECORD_QUERIES = {
+  journal:   { sql: 'SELECT * FROM journal_entries WHERE id = ?', show: showJournalDetail },
+  contact:   { sql: 'SELECT * FROM contacts WHERE id = ?',        show: showContactDetail },
+  knowledge: { sql: 'SELECT * FROM knowledge_base WHERE id = ?',  show: showKnowledgeDetail },
+  meeting:   { sql: 'SELECT * FROM meetings WHERE id = ?',        show: showMeetingDetail },
+  project:   { sql: 'SELECT * FROM projects WHERE id = ?',        show: showProjectDetail },
+};
+
+window.PKA = {
+  version: '1.0.0',
+  readOnly: true,
+
+  getCounts() {
+    return {
+      journal:   count('journal_entries'),
+      contacts:  count('contacts'),
+      files:     count('files'),
+      projects:  count('projects'),
+      meetings:  count('meetings'),
+      knowledge: count('knowledge_base'),
+      glossary:  tableExists('glossary') ? count('glossary') : 0,
+      images:    tableExists('images')   ? count('images')   : 0,
+    };
+  },
+
+  getActiveTab() { return currentTab; },
+
+  switchTab(tab) {
+    if (!TAB_IDS.includes(tab)) throw new Error('Unknown tab: ' + tab);
+    setActiveTab(tab);
+    return tab;
+  },
+
+  getVisibleRows() {
+    const panel = document.getElementById('tab-' + currentTab);
+    if (!panel) return [];
+    return Array.from(panel.querySelectorAll('tr[data-action]')).map(tr => ({
+      type: tr.dataset.action,
+      id:   Number(tr.dataset.id),
+      text: tr.innerText.replace(/\s+/g, ' ').trim(),
+    }));
+  },
+
+  showRecord(type, id) {
+    const entry = RECORD_QUERIES[type];
+    if (!entry) throw new Error('Unknown record type: ' + type);
+    const numId = Number(id);
+    if (!Number.isFinite(numId)) throw new Error('Invalid id: ' + id);
+    entry.show(numId);
+    return { type, id: numId };
+  },
+
+  getRecord(type, id) {
+    const entry = RECORD_QUERIES[type];
+    if (!entry) throw new Error('Unknown record type: ' + type);
+    const numId = Number(id);
+    const rows = query(entry.sql.replace('?', numId));
+    return rows.length ? rows[0] : null;
+  },
+
+  runDiagnostics() {
+    const expected = ['journal_entries','contacts','files','projects','meetings','knowledge_base'];
+    const optional = ['glossary','images','entry_contacts'];
+    const tables = {};
+    expected.forEach(t => { tables[t] = { present: tableExists(t), required: true }; });
+    optional.forEach(t => { tables[t] = { present: tableExists(t), required: false }; });
+    const missingRequired = expected.filter(t => !tableExists(t));
+    const counts = !!db && missingRequired.length === 0 ? this.getCounts() : null;
+    const panel = document.getElementById('tab-' + currentTab);
+    const visibleRowCount = panel ? panel.querySelectorAll('tr[data-action]').length : 0;
+    return {
+      dbLoaded: !!db,
+      activeTab: currentTab,
+      tables,
+      missingRequired,
+      counts,
+      visibleRowCount,
+      ok: !!db && missingRequired.length === 0,
+    };
+  },
+
+  tabs: TAB_IDS.slice(),
+};
+
+// -- Boot --------------------------------------------------------------------
+
+initApp();
+</script>
+</body>
+</html>

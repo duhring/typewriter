@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "machine_id": "set-in-machine.local.json",
+  "corpus_id": "PKA",
+  "display_name": "PKA host",
+  "role": "standalone",
+  "db_write": true,
+  "owner": "set-in-machine.local.json",
+  "default_agent": "Larry",
+  "platform": { "os": "macOS", "arch": "arm64" },
+  "services": {
+    "discord_bridge": { "enabled": false, "path": "discord-bridge/bot.py", "channel_env": "LARRY_CHANNEL_ID" },
+    "ollama": { "enabled": false, "model": "gemma4:latest" },
+    "viewer": { "enabled": true, "path": "viewer.html" }
+  },
+  "discord_channels": { "larry": null, "machine_status": null, "artifacts": null },
+  "agent_surface": {
+    "primary_orchestrator": "Larry",
+    "specialists": ["Pax", "Nolan", "Sable", "Maven", "Reed", "Vera", "Dreamer"]
+  },
+  "sync": {
+    "peer_machines": [],
+    "durable_state_policy": "files-sqlite-cli-tools",
+    "secrets_policy": "do-not-store-secrets-in-machine-json"
+  },
+  "notes": [
+    "Shared, git-tracked host description. Per-machine identity goes in config/machine.local.json (gitignored).",
+    "Secrets remain in discord-bridge/.env, keychains, or approved secret helpers."
+  ]
+}

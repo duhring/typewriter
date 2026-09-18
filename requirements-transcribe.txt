@@ -1,0 +1,4 @@
+# Optional: local Whisper transcription (tools/transcribe.py, tools/fetch-transcript.py local mode).
+# Pulls torch (~2 GB). Skip if you will transcribe with the HyperFrames CLI or a hosted service.
+openai-whisper @ git+https://github.com/openai/whisper.git@04f449b8a437f1bbd3dba5c9f826aca972e7709a
+tiktoken==0.13.0

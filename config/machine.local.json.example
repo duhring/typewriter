@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "machine_id": "my-macbook",
+  "corpus_id": "PKA-my-macbook",
+  "display_name": "My MacBook",
+  "hostname": "my-macbook.local",
+  "role": "standalone",
+  "db_write": true,
+  "owner": "Your Name",
+  "default_agent": "Larry"
+}
