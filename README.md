@@ -7,7 +7,7 @@ Runs on macOS (Apple Silicon or Intel) inside [Claude Code](https://claude.com/c
 ## Install
 
 ```bash
-git clone <this-repo> PKA && cd PKA
+git clone https://github.com/duhring/typewriter.git PKA && cd PKA
 ./bootstrap.sh
 ```
 
