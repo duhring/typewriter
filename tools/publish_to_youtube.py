@@ -36,6 +36,7 @@ Examples:
   python3 tools/publish_to_youtube.py upload --latest --title 1 --privacy unlisted
 """
 
+import os
 import argparse
 import json
 import re

@@ -83,7 +83,7 @@ fi
 # 6. Optional tools -----------------------------------------------------------
 step "6/6 Optional tools"
 command -v claude       >/dev/null && ok "claude CLI found"      || warn "claude CLI not found: npm install -g @anthropic-ai/claude-code (the orchestrator runs inside Claude Code)"
-command -v hyperframes  >/dev/null && ok "hyperframes CLI found" || warn "hyperframes not found: npm install -g hyperframes (needed for HTML video renders)"
+command -v node >/dev/null && ok "node found (tools run HyperFrames via npx --yes hyperframes)" || warn "node not found: needed for HyperFrames renders"
 command -v ffmpeg       >/dev/null && ok "ffmpeg found"          || warn "ffmpeg not found"
 command -v yt-dlp       >/dev/null && ok "yt-dlp found"          || warn "yt-dlp not found (transcript fallback)"
 [ -d "/Applications/CueCam Presenter.app" ] && ok "CueCam Presenter installed" || warn "CueCam Presenter not installed (recording stage; https://cuecam.app). Grant Accessibility + Screen Recording to Terminal for live control."

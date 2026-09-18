@@ -22,7 +22,7 @@ Flags: `--with-transcribe` adds local Whisper (about 2 GB), `--skip-brew` leaves
 | API keys in `discord-bridge/.env` | LLM calls from tools, Discord posting, thumbnail generation | `docs/larry/llm-providers.md` |
 | Google Cloud OAuth client | Calendar, Docs, Drive, Sheets, YouTube upload | `tools/GCAL-SETUP.md`, then `tools/auth_doctor.py` |
 | Claude Code CLI | The orchestrator (`CLAUDE.md`) and specialists (`.claude/agents/`) run inside it | `npm install -g @anthropic-ai/claude-code` |
-| HyperFrames CLI | HTML-based video renders, captions, TTS | `npm install -g hyperframes` |
+| Node (HyperFrames) | HTML-based video renders, captions, TTS; tools call `npx --yes hyperframes` | `Brewfile` installs node |
 | CueCam Presenter | Recording stage; live control needs Accessibility and Screen Recording permission | https://cuecam.app |
 | Discord bot (optional) | Chat front-end to the orchestrator | `discord-bridge/README.md` |
 | Ollama or LM Studio (optional) | Local models for retrieval and drafts | `docs/larry/llm-providers.md` |
