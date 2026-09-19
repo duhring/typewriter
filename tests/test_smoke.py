@@ -38,6 +38,7 @@ class TestImports(unittest.TestCase):
         "health_escalation",
         "video_project",
         "video_qc",
+        "handoff",
     ]
 
     def test_imports(self):
