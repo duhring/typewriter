@@ -78,7 +78,7 @@ A failed apply is not recorded. The ledger gains a record only after the stage's
 To check a response without applying it:
 
 ```bash
-python3 tools/handoff.py validate --request path/to/<stage>.request.json
+bin/pka handoff validate --request path/to/<stage>.request.json
 ```
 
 The result names the rule that failed, or reports `valid` and whether this exact response has already been imported.
@@ -88,7 +88,7 @@ The result names the rule that failed, or reports `valid` and whether this exact
 Each directory that holds requests also holds `handoff-imports.json`. Every applied import adds one record: stage, request ID, response path, response hash, and time. Import checks the ledger before applying; a response already recorded for the same request is skipped and reported as `already_imported`. A revised response to the same request has a different hash and is applied.
 
 ```bash
-python3 tools/handoff.py ledger path/to/directory
+bin/pka handoff ledger path/to/directory
 ```
 
 ## Sequential stages

@@ -11,9 +11,20 @@ git clone https://github.com/duhring/typewriter.git PKA && cd PKA
 ./bootstrap.sh
 ```
 
-The script installs Homebrew packages from `Brewfile`, builds a Python venv at `discord-bridge/venv`, creates `discord-bridge/.env` and `config/machine.local.json` from their examples, initializes `data/pka.db`, runs the smoke tests, and reports which optional tools are missing. Re-running is safe.
+The script installs Homebrew packages from `Brewfile`, checks the Python it selects (path, version, and architecture, and whether the developer tools can build for it), builds a Python venv, creates `discord-bridge/.env` and `config/machine.local.json` from their examples, initializes `data/pka.db`, runs the smoke tests, and reports which optional tools are missing and which workflow needs each. Re-running is safe: an existing venv is validated before it is reused, and one built by an incompatible interpreter is reported with the command to remove it, never reused silently.
 
-Flags: `--with-transcribe` adds local Whisper (about 2 GB), `--skip-brew` leaves Homebrew alone.
+Flags: `--with-transcribe` adds local Whisper (about 2 GB, only for transcribing local video files), `--skip-brew` leaves Homebrew alone, `--python PATH` picks the interpreter (or set `PKA_PYTHON`), `--allow-rosetta` accepts an Intel Python on Apple Silicon when the developer tools can still build for it.
+
+Run every tool through the launcher, which hides where the environment lives:
+
+```bash
+bin/pka list                 # tools available
+bin/pka challenge --help     # tools/challenge.py
+bin/pka test                 # the test suite
+bin/pka check                # re-run the Python and toolchain check
+```
+
+Any assistant that can read files and run commands uses the same launcher. No model service, no model keys: your assistant does the thinking, PKA validates and records the results. See `docs/handoff-contract.md`.
 
 ## What you have to do by hand
 
@@ -21,9 +32,9 @@ Flags: `--with-transcribe` adds local Whisper (about 2 GB), `--skip-brew` leaves
 |---|---|---|
 | API keys in `discord-bridge/.env` | LLM calls from tools, Discord posting, thumbnail generation | `docs/larry/llm-providers.md` |
 | Google Cloud OAuth client | Calendar, Docs, Drive, Sheets, YouTube upload | `tools/GCAL-SETUP.md`, then `tools/auth_doctor.py` |
-| Claude Code CLI | The orchestrator (`CLAUDE.md`) and specialists (`.claude/agents/`) run inside it | `npm install -g @anthropic-ai/claude-code` |
-| Node (HyperFrames) | HTML-based video renders, captions, TTS; tools call `npx --yes hyperframes` | `Brewfile` installs node |
-| CueCam Presenter | Recording stage; live control needs Accessibility and Screen Recording permission | https://cuecam.app |
+| An AI assistant with file and command access | Runs the interviews, analysis, and drafting; calls tools through `bin/pka`. Claude Code reads `CLAUDE.md` and `.claude/`; any other assistant reads `AGENTS.md` | Claude Code: `npm install -g @anthropic-ai/claude-code`; or Codex, or another |
+| Node (HyperFrames, optional) | HTML-based video renders, captions, TTS; tools call `npx --yes hyperframes`. None of the three core paths need it | `Brewfile` installs node |
+| CueCam Presenter | Presenting and recording a deck; live control needs Accessibility and Screen Recording permission. Bundles build without it | https://cuecam.app |
 | Discord bot (optional) | Chat front-end to the orchestrator | `discord-bridge/README.md` |
 | Ollama or LM Studio (optional) | Local models for retrieval and drafts | `docs/larry/llm-providers.md` |
 

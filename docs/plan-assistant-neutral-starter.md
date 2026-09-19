@@ -155,7 +155,7 @@ One ticket per row, in dependency order. Phase numbers match the order of work.
 |---|---|---|---|
 | T1 | Handoff contract: request and response file formats, request IDs, per-stage input hashes, `schema_version: 1`, shared validation library, idempotent import that never touches approvals. Done 2026-09-18: `tools/handoff.py`, `tests/test_handoff.py`, `docs/handoff-contract.md` | | 1 |
 | T2 | Negative tests for the contract: stale hash, unknown request, duplicate IDs, changed material, double import, approvals untouched by import. Done 2026-09-18: added `depends_on` and `missing_stage` to the contract, failed applies are not recorded, and gate approvals now go stale on in-place file edits (was re-attach only) | T1 | 1 |
-| T3 | Neutral launcher and proportional bootstrap: report selected Python path, version, and architecture; refuse incompatible toolchains and existing environments before installing; clear failure reporting | | 1 |
+| T3 | Neutral launcher and proportional bootstrap: report selected Python path, version, and architecture; refuse incompatible toolchains and existing environments before installing; clear failure reporting. Done 2026-09-18: `bin/pka`, `tools/env_check.py` (parses the toolchain's Mach-O architectures), `bootstrap.sh` validates an existing venv and never deletes one, optional tools reported by the path that needs them, ollama check removed | | 1 |
 | T4 | Challenge gate as three sequential handoffs in one recorded run | T1 | 2 |
 | T5 | Balance check prepare and import | T1 | 2 |
 | T6 | CueCam: remove `--raw-prose`, lazy Google imports | | 2 |

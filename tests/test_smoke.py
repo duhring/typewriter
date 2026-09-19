@@ -39,6 +39,7 @@ class TestImports(unittest.TestCase):
         "video_project",
         "video_qc",
         "handoff",
+        "env_check",
     ]
 
     def test_imports(self):

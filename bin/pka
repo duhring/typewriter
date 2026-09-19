@@ -1,0 +1,64 @@
+#!/bin/bash
+# Neutral launcher for PKA tools. Hides where the Python environment lives.
+#
+#   bin/pka <tool> [args...]     run tools/<tool>.py   (pka challenge --help)
+#   bin/pka python [args...]     the environment's python3
+#   bin/pka test [args...]       run the test suite
+#   bin/pka check                check the environment's Python against this Mac
+#   bin/pka list                 list available tools
+#
+# <tool> is the file name without .py; hyphens and underscores are
+# interchangeable (fetch-transcript, fetch_transcript). Any assistant that can
+# run commands uses this the same way; no assistant-specific setup is needed.
+#
+# Environment: PKA_PYTHON overrides the interpreter (used when no environment
+# exists yet, or to point at another one).
+
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VENV="$ROOT/discord-bridge/venv"
+
+usage() { sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
+
+# Commands that need no interpreter.
+case "${1:-}" in
+  ""|-h|--help|help) usage; exit 0 ;;
+  list) ls "$ROOT/tools"/*.py | xargs -n1 basename | sed 's/\.py$//' | grep -v '^_' | sort; exit 0 ;;
+esac
+
+if [ -n "${PKA_PYTHON:-}" ]; then
+  PY="$PKA_PYTHON"
+elif [ -x "$VENV/bin/python3" ]; then
+  PY="$VENV/bin/python3"
+else
+  echo "pka: no Python environment at $VENV. Run ./bootstrap.sh first, or set PKA_PYTHON." >&2
+  exit 1
+fi
+
+resolve_tool() {
+  local name="$1" candidate
+  for candidate in "$name" "${name//-/_}" "${name//_/-}"; do
+    if [ -f "$ROOT/tools/$candidate.py" ]; then
+      echo "$ROOT/tools/$candidate.py"; return 0
+    fi
+  done
+  return 1
+}
+
+cmd="${1:-}"
+[ $# -gt 0 ] && shift
+
+case "$cmd" in
+  python)
+    cd "$ROOT" && exec "$PY" "$@" ;;
+  test)
+    cd "$ROOT" && exec "$PY" -m unittest discover -s tests "$@" ;;
+  check)
+    cd "$ROOT" && exec "$PY" tools/env_check.py --venv "$VENV" "$@" ;;
+  *)
+    if tool="$(resolve_tool "$cmd")"; then
+      cd "$ROOT" && exec "$PY" "$tool" "$@"
+    fi
+    echo "pka: unknown tool '$cmd'. Try: bin/pka list" >&2
+    exit 2 ;;
+esac
