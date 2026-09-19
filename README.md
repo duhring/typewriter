@@ -26,6 +26,12 @@ bin/pka check                # re-run the Python and toolchain check
 
 Any assistant that can read files and run commands uses the same launcher. No model service, no model keys: your assistant does the thinking, PKA validates and records the results. See `docs/handoff-contract.md`.
 
+The definition of done for a fresh install is one command. It clears every model variable, runs the unit suite, then runs all three entry points end to end (develop, article from an intake and from a transcript, publish in owner and automated modes) with canned assistant responses:
+
+```bash
+tests/acceptance/all.sh
+```
+
 ## What you have to do by hand
 
 | Need | Why | Where |

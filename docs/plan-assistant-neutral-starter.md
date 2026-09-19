@@ -1,7 +1,7 @@
 # Plan: assistant-neutral starter with three entry points
 
 Date: 2026-09-18
-Status: proposed, reviewer feedback of 2026-09-18 folded in
+Status: implemented 2026-09-18 to 2026-09-19 (T1 to T19); reviewer feedback of 2026-09-18 folded in
 Applies to: `~/Code/pka-starter` (the mini will be upgraded to the same system; no compatibility path is kept for it)
 Shared copy: https://claude.ai/artifact/W59YJDy776HMVfudcDnhyz
 
@@ -171,9 +171,9 @@ One ticket per row, in dependency order. Phase numbers match the order of work.
 | T16 | Provider removal: delete router and clients, clean config, bootstrap, README, retire provider doc; remove `promote_sop` and `generate_thumbnail`. Done 2026-09-18: `llm.py`, `lmstudio.py`, `xai.py`, `glm.py`, `rotate_glm_key.py`, `promote_sop.py`, and `docs/larry/llm-providers.md` deleted; provider keys and routing removed from the env example, the ollama block from machine config, the provider row from the README; the Discord bot's grok-brief command (xAI) removed; federation, operations, and Dreamer docs reworded; `tests/test_no_provider.py` scans the repo for any provider import, key, or mention | T8, T11, T15, T17 | 5 |
 | T17 | Keyword retrieval default; text-search table if missing; drop the `lmstudio` import from memory retrieval. Done 2026-09-18: no text-search table existed; an FTS5 index (porter stemming, BM25) over chunk titles and text is created on first sync and kept in step by triggers, and an existing database is rebuilt into it without re-sync; recall is read-only and needs no model; the recency, source, and intent bonuses are unchanged; the embedding column stays for compatibility but is never written | | 5 |
 | T18 | `AGENTS.md` as the primary workflow document; Claude files point at it. Done 2026-09-18: `AGENTS.md` retitled and declared the primary contract with nothing essential elsewhere; `CLAUDE.md` declares itself the Claude Code adapter and yields to `AGENTS.md` on conflict, routes the three entries to `docs/assistant-workflows.md`, and states the specialists are voices for one assistant; `llms.txt` and the README list `AGENTS.md` first; every remaining old interpreter path in 19 markdown files swept to `bin/pka`; the one-shot remnants in the CueCam doc removed; tests lock the primary/adapter wording and the path sweep | T8, T11, T15 | 5 |
-| T19 | Clean-install verification of all three entries on a machine with no keys and no model server | T16 to T18 | 5 |
+| T19 | Clean-install verification of all three entries on a machine with no keys and no model server. Done 2026-09-19: `tests/acceptance/all.sh` clears every model variable, checks for provider modules and imports, runs the unit suite (322), then the five acceptance runs; passed on a fresh clone after bootstrap, every project complete with only the owner's approvals present | T16 to T18 | 5 |
 
-First milestone reached 2026-09-18: T1 to T8 done and committed; the develop path runs end to end on a fresh install with no model service or keys. Phases 3 and 4 (article and publish paths, T9 to T15) done 2026-09-18. Next: phase 5, provider removal, keyword retrieval, AGENTS.md as the primary document, and the clean-install verification of all three entries (T16 to T19).
+First milestone reached 2026-09-18: T1 to T8 done and committed; the develop path runs end to end on a fresh install with no model service or keys. All five phases done (T1 to T19, 2026-09-18 to 2026-09-19). The acceptance criteria hold on a fresh clone: three entry points, no model service, no model keys, every approval the owner's, every assistant response validated on import. Remaining: upgrade the mini to this system and back-port the path and configuration changes (see Back-port).
 
 ## Back-port
 
