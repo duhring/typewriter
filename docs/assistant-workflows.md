@@ -66,4 +66,3 @@ automated mode:  bin/pka pipeline upload --project S (Google auth); youtube-qa .
 ```
 
 The thumbnail is artwork the owner supplies or you make with an image-capable tool; nothing generates one. The project completes on the delivered materials, the recorded public URL, and (automated mode) a release approval that is still current. Uploading needs the owner's Google authorization; everything before it needs no key.
-

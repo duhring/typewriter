@@ -45,6 +45,22 @@ must prepare/import a new package and chapter review, then obtain fresh owner
 approval. Re-extracting an interview retains run history and snapshots of prior
 claims; owner decisions transfer only to an unchanged claim and supporting quote.
 
+## Real production trial
+
+On September 19, 2026, the starter was used on an Apple Silicon Mac to open a
+CueCam bundle, record a video, remove silences, edit the result, approve its
+publishing package, share the video as unlisted, and develop an article through
+an owner interview. The owner published [Get Into Production](https://johnduhring.substack.com/p/get-into-production)
+from that run.
+
+This trial used an existing local whisper.cpp installation to supply a timed
+transcript and YouTube Studio for upload. It did not verify the starter's Python
+Whisper installation or Google OAuth upload path. For local transcription through
+PKA, install the optional dependency with `./bootstrap.sh --with-transcribe`;
+alternatively supply a timed transcript with `pipeline package prepare --transcript`.
+For API upload, configure your own Google OAuth client and authorize YouTube.
+The trial is evidence of one working Mac setup, not universal hardware coverage.
+
 ## What you have to do by hand
 
 | Need | Why | Where |
