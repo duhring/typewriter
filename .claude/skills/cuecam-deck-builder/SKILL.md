@@ -38,7 +38,7 @@ Unless explicitly overridden by the owner:
 
 ### 1. Build from Mobile Card Spec or Markdown
 ```bash
-discord-bridge/venv/bin/python3 tools/cuecam.py compose \
+bin/pka cuecam compose \
   --spec-file owners-inbox/my-talk.md \
   --theme cyber-glass-max \
   --title "My Presentation Title"

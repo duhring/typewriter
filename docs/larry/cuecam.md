@@ -8,16 +8,16 @@ Larry handles CueCam generation directly using `tools/cuecam.py`.
 
 ```bash
 # Create from a Google Doc
-discord-bridge/venv/bin/python3 tools/cuecam.py create --doc-id DOC_ID --upload
+bin/pka cuecam create --doc-id DOC_ID --upload
 
 # Create from a mobile-style spec plus media
-discord-bridge/venv/bin/python3 tools/cuecam.py compose --spec-file team-inbox/discord/NOTE.md --asset team-inbox/discord/IMG1.jpg --asset team-inbox/discord/CLIP1.mov
+bin/pka cuecam compose --spec-file team-inbox/discord/NOTE.md --asset team-inbox/discord/IMG1.jpg --asset team-inbox/discord/CLIP1.mov
 
 # Create from local markdown
-discord-bridge/venv/bin/python3 tools/cuecam.py from-file --file owners-inbox/blog/2026-03-28-post.md --title "My Talk"
+bin/pka cuecam from-file --file owners-inbox/blog/2026-03-28-post.md --title "My Talk"
 
 # List presentations
-discord-bridge/venv/bin/python3 tools/cuecam.py list
+bin/pka cuecam list
 ```
 
 ## Routing Rules
@@ -30,7 +30,7 @@ When the owner sends a Google Doc URL with a presentation request:
 2. Run:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/cuecam.py create --doc-id DOC_ID --upload
+bin/pka cuecam create --doc-id DOC_ID --upload
 ```
 
 3. Return the local path and any upload/download link
@@ -44,7 +44,7 @@ When the owner sends a Discord note plus media attachments describing cards:
 3. Run:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/cuecam.py compose ...
+bin/pka cuecam compose ...
 ```
 
 4. If the owner explicitly asks for a preview first, run the same command with `--preview` and summarize the parsed cards before building
@@ -160,7 +160,7 @@ If the owner asks for a relevant quote and attribution, Larry should resolve the
 
 Then run `tools/cuecam.py compose` on the normalized spec. The tool should be stable; Larry should carry the more flexible dictation burden.
 
-**Optional Grok shortcut: `--raw-prose`.** When dictation is unusually long or messy, Larry can hand the raw prose to `tools/cuecam.py compose --raw-prose <file>`. Grok normalizes the prose into the spec format above, saves it as a sibling `<source>.normalized.spec` for traceability, then runs the deterministic parser unchanged. On parser failure, the JSON error surfaces `normalized_from_prose: true` plus the spec path so Larry can inspect or hand-edit before retrying. This is a Larry-judgment call, not the default — quote attribution, single-card dictations, and short specs are still cleaner to rewrite inline.
+**No dictation-normalizing model call.** `compose` takes a spec file and nothing else. When the owner dictates in loose prose, the assistant rewrites it into the spec format above and saves it as a file before calling `bin/pka cuecam compose --spec-file <file>`. On a parser error the JSON names the malformed lines; fix the spec and re-run. Local bundle creation needs no Google packages and no OAuth; only `create --doc-id` and `--upload` do, and they say so plainly when the packages are missing.
 
 ## Locating Drive-referenced media
 
@@ -279,7 +279,7 @@ This is the copy-paste recipe to follow when you see a Discord message containin
    - replace each `hyperframes "Title", text` line with `lower-third "Title", text`
 2. **Compose.** Run:
    ```bash
-   discord-bridge/venv/bin/python3 tools/cuecam.py compose \
+   bin/pka cuecam compose \
      --spec-file /tmp/cuecam-spec.txt \
      --title "<short title without leading date — cuecam.py prefixes today's date automatically>"
    ```
@@ -549,7 +549,7 @@ Two paths — ask the owner which applies:
 - **Record a polish pass in CueCam:** build a single-movie-card bundle so the owner can record a new take with overlays visible:
 
   ```bash
-  discord-bridge/venv/bin/python3 tools/cuecam.py polish \
+  bin/pka cuecam polish \
     --source-deck "owners-inbox/presentations/<deck-slug>.cuecam" \
     --rendered-video "/path/to/rendered-overlay-video.mp4" \
     --title "<Deck Title> (polished)" \

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 CueCam Presenter CLI tool for PKA.
-Usage: discord-bridge/venv/bin/python3 tools/cuecam.py <command> [options]
+Usage: bin/pka cuecam <command> [options]
 
 Commands:
   create      Create a .cuecam bundle from a Google Doc
@@ -24,14 +24,7 @@ from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
-
-import requests as http_requests
-
-# Ensure tools/ is on sys.path so local modules (pka_index, llm, etc.) resolve from any cwd.
+# Ensure tools/ is on sys.path so local modules (pka_index etc.) resolve from any cwd.
 _tools_dir = str(Path(__file__).resolve().parent)
 if _tools_dir not in sys.path:
     sys.path.insert(0, _tools_dir)
@@ -756,58 +749,6 @@ def _parse_default_line(plain: str) -> tuple[Optional[str], Optional[str], Optio
     return None, None, None
 
 
-_PROSE_NORMALIZER_SYSTEM = """You convert loose presentation dictation into PKA's CueCam mobile-spec format.
-
-Output ONLY the normalized spec. No commentary. No markdown fences. No leading or trailing prose.
-
-Format reference:
-- Optional design block first (one directive per line): theme: <name>, background: <color>, layout: left|center|right, font: <name>, light text, pip on, pip off.
-- Blank line, then numbered cards: `N. "Headline", teleprompter notes`.
-- Quote cards: `N. quote center pip off "Quote text", Attribution`.
-- Movie/image cards consume attachments in order; do not invent attachment paths.
-
-Example dictation:
-Use a clean theme with a green background and left layout. The text should be in light Futura font. For Card One, the headline should be "My Day at the Farmers Market." The teleprompter for this card should say "There's lots of asparagus." Include the first image attached.
-
-Example normalized spec:
-theme: clean
-background: green
-layout: left
-font: Futura-Light
-
-1. "My Day at the Farmers Market.", There's lots of asparagus.
-
-Rules:
-- Preserve owner's exact headline wording in quotes.
-- Keep teleprompter notes concise; do not embellish.
-- If the owner is ambiguous about layout/theme/font, omit the directive rather than guess.
-- If a card line is malformed in the dictation, leave it as the closest reasonable card and let the deterministic parser surface the error."""
-
-
-def normalize_prose_to_spec(prose: str) -> str:
-    """Use Grok (via tools/llm.py) to rewrite loose dictation into CueCam mobile spec.
-
-    Validation happens downstream in parse_compose_spec(); a bad pass fails fast there.
-    """
-    import sys as _sys
-    _tools_dir = str(Path(__file__).resolve().parent)
-    if _tools_dir not in _sys.path:
-        _sys.path.insert(0, _tools_dir)
-    import llm  # type: ignore
-
-    text = (prose or "").strip()
-    if not text:
-        raise ValueError("normalize_prose_to_spec: empty prose input")
-
-    return llm.chat_text(
-        text,
-        system=_PROSE_NORMALIZER_SYSTEM,
-        provider="xai",
-        max_tokens=1024,
-        label="cuecam_normalize",
-    ).strip()
-
-
 def parse_compose_spec(spec_text: str, asset_paths: list[Path]):
     """Parse a mobile-friendly CueCam spec plus attached media.
 
@@ -966,9 +907,32 @@ def parse_compose_spec(spec_text: str, asset_paths: list[Path]):
 
 
 # ── Auth / Services ─────────────────────────────────────────────────
+#
+# The Google packages are imported here, not at module load: only `create
+# --doc-id` and `--upload` need them. Local bundle creation (compose,
+# from-file, list) runs with no Google packages installed and no OAuth.
+
+def _google():
+    """Import the Google client packages, with a plain message when absent."""
+    try:
+        from google.oauth2.credentials import Credentials
+        from google.auth.transport.requests import Request
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaFileUpload
+    except ImportError as exc:
+        print(json.dumps({
+            "error": "google_packages_missing",
+            "message": "Google client packages are not installed. They are needed only for "
+                       "`create --doc-id` and `--upload`; install with: bin/pka python -m pip install -r requirements.txt",
+            "detail": str(exc),
+        }), file=sys.stderr)
+        sys.exit(1)
+    return Credentials, Request, build, MediaFileUpload
+
 
 def _get_creds():
     """Load or refresh credentials."""
+    Credentials, Request, _, _ = _google()
     creds = None
     if TOKEN_FILE.exists():
         creds = Credentials.from_authorized_user_file(str(TOKEN_FILE), SCOPES)
@@ -987,10 +951,12 @@ def _get_creds():
 
 
 def get_docs_service():
+    build = _google()[2]
     return build("docs", "v1", credentials=_get_creds())
 
 
 def get_drive_service():
+    build = _google()[2]
     return build("drive", "v3", credentials=_get_creds())
 
 
@@ -1004,6 +970,7 @@ def get_pka_folder_id():
 
 def _download_image(content_uri, creds):
     """Download an image from a Google Docs content URI."""
+    import requests as http_requests  # only Google Doc images need it
     resp = http_requests.get(
         content_uri,
         headers={"Authorization": f"Bearer {creds.token}"},
@@ -1027,6 +994,7 @@ def parse_google_doc(doc_id):
 
     Returns (cards, images) where images is [(filename, bytes), ...].
     """
+    build = _google()[2]
     creds = _get_creds()
     docs = build("docs", "v1", credentials=creds)
 
@@ -1351,6 +1319,7 @@ def upload_to_drive(bundle_path):
     if folder_id:
         metadata["parents"] = [folder_id]
 
+    MediaFileUpload = _google()[3]
     media = MediaFileUpload(str(zip_path), mimetype="application/zip")
     result = drive.files().create(
         body=metadata,
@@ -1457,54 +1426,17 @@ def cmd_from_file(args):
 
 
 def cmd_compose(args):
-    """Create a .cuecam bundle from a mobile-style text spec and media."""
-    raw_prose_path = getattr(args, "raw_prose", None)
-    spec_file = getattr(args, "spec_file", None)
+    """Create a .cuecam bundle from a mobile-style text spec and media.
 
-    if raw_prose_path and spec_file:
-        print(json.dumps({"error": "Use either --raw-prose or --spec-file, not both."}), file=sys.stderr)
-        sys.exit(2)
-    if not raw_prose_path and not spec_file:
-        print(json.dumps({"error": "Provide --raw-prose <file|-> or --spec-file <file>."}), file=sys.stderr)
-        sys.exit(2)
-
-    if raw_prose_path:
-        # Read prose (stdin if "-"), normalize via Grok, persist sibling .normalized.spec for traceability.
-        if raw_prose_path == "-":
-            prose_text = sys.stdin.read()
-            normalized_dir = PKA_ROOT / "data" / "tmp"
-            normalized_dir.mkdir(parents=True, exist_ok=True)
-            spec_path = normalized_dir / f"cuecam-prose-{date.today().isoformat()}-{uuid.uuid4().hex[:8]}.normalized.spec"
-        else:
-            prose_path = Path(raw_prose_path)
-            if not prose_path.is_absolute():
-                prose_path = PKA_ROOT / prose_path
-            if not prose_path.exists():
-                print(json.dumps({"error": f"Prose file not found: {prose_path}"}), file=sys.stderr)
-                sys.exit(1)
-            prose_text = prose_path.read_text(encoding="utf-8")
-            spec_path = prose_path.with_suffix(prose_path.suffix + ".normalized.spec")
-
-        try:
-            normalized = normalize_prose_to_spec(prose_text)
-        except Exception as exc:
-            print(json.dumps({"error": f"Prose normalization failed: {exc}"}), file=sys.stderr)
-            sys.exit(1)
-
-        try:
-            spec_path.parent.mkdir(parents=True, exist_ok=True)
-            spec_path.write_text(normalized + ("\n" if not normalized.endswith("\n") else ""), encoding="utf-8")
-        except Exception as exc:
-            print(json.dumps({"error": f"Could not save normalized spec: {exc}"}), file=sys.stderr)
-            sys.exit(1)
-    else:
-        spec_path = Path(spec_file)
-        if not spec_path.is_absolute():
-            spec_path = PKA_ROOT / spec_path
-
-        if not spec_path.exists():
-            print(json.dumps({"error": f"Spec file not found: {spec_path}"}), file=sys.stderr)
-            sys.exit(1)
+    The spec is written by the owner or the owner's assistant; this tool only
+    parses, previews, and builds. There is no dictation-normalizing model call.
+    """
+    spec_path = Path(args.spec_file)
+    if not spec_path.is_absolute():
+        spec_path = PKA_ROOT / spec_path
+    if not spec_path.exists():
+        print(json.dumps({"error": f"Spec file not found: {spec_path}"}), file=sys.stderr)
+        sys.exit(1)
 
     asset_paths = []
     raw_assets = list(args.asset) + list(args.image)
@@ -1548,9 +1480,6 @@ def cmd_compose(args):
             "warnings": warnings,
             "path": str(spec_path),
         }
-        if raw_prose_path:
-            payload["normalized_from_prose"] = True
-            payload["hint"] = "Inspect the normalized spec at the path above; edit it directly or refine the dictation."
         print(json.dumps(payload, indent=2), file=sys.stderr)
         sys.exit(1)
 
@@ -1712,11 +1641,7 @@ def main():
 
     # compose
     p_compose = sub.add_parser("compose", help="Create from a mobile-style card spec")
-    p_compose.add_argument("--spec-file", help="Path to a text file describing cards (mutually exclusive with --raw-prose)")
-    p_compose.add_argument(
-        "--raw-prose",
-        help="Path to a loose-dictation prose file (or '-' for stdin); Grok normalizes to spec, then runs the deterministic parser.",
-    )
+    p_compose.add_argument("--spec-file", required=True, help="Path to a text file describing cards")
     p_compose.add_argument(
         "--asset",
         action="append",
