@@ -942,14 +942,57 @@ def _approval_hashes(project: dict, gate: str) -> dict[str, list[str]]:
     return result
 
 
+_DISK_HASH_CACHE: dict[str, tuple[int, int, str]] = {}
+
+
+def _disk_hash(record: dict) -> str | None:
+    """Current SHA-256 of an attached artifact's file, or None if it is gone.
+
+    Cached on (mtime_ns, size) so status checks do not re-read a multi-GB
+    master every time; an edited file changes both and is re-hashed."""
+    path = resolve_path(record["path"])
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    key = str(path)
+    cached = _DISK_HASH_CACHE.get(key)
+    if cached and cached[0] == stat.st_mtime_ns and cached[1] == stat.st_size:
+        return cached[2]
+    digest = hash_path(path)
+    _DISK_HASH_CACHE[key] = (stat.st_mtime_ns, stat.st_size, digest)
+    return digest
+
+
+def _gate_files_unchanged(project: dict, gate: str) -> bool:
+    """Every file the gate approved still hashes to what was attached.
+
+    Re-attaching a changed file already invalidates the approval through the
+    record's hash; this catches the file edited in place without a re-attach."""
+    kinds = list(GATE_ARTIFACTS[gate]) + list(GATE_OPTIONAL_ARTIFACTS.get(gate, []))
+    for kind in kinds:
+        if kind == "thumbnail":
+            records = [project.get("selections", {}).get("thumbnail") or {}]
+        else:
+            records = artifact_records(project, kind)
+        for record in records:
+            if not record.get("path"):
+                continue
+            if _disk_hash(record) != record.get("sha256"):
+                return False
+    return True
+
+
 def approval_is_current(project: dict, gate: str) -> bool:
     approval = project.get("approvals", {}).get(gate)
     if not approval:
         return False
     try:
-        return approval.get("artifact_hashes") == _approval_hashes(project, gate)
+        if approval.get("artifact_hashes") != _approval_hashes(project, gate):
+            return False
     except ValueError:
         return False
+    return _gate_files_unchanged(project, gate)
 
 
 def approve_gate(*, slug: str, gate: str, approved_by: str, note: str = "") -> dict:

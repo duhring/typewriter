@@ -52,8 +52,15 @@ Rules this module enforces, in the order they are checked:
   duplicate_ids    no id appears twice
   missing_ids      every expected id is answered (when the request expects ids)
   unknown_ids      no id outside the expected set (when the request expects ids)
+  missing_stage    every stage this request depends on has been imported
+                   (recorded in the ledger) — a context review cannot land
+                   before its challenge stage
   item_invalid     the stage's item validator accepted every item
                    (a stage may raise its own code, e.g. quote_not_found)
+
+A failed apply is not recorded: the ledger gains a record only after the
+stage's work completes, so a crash mid-apply leaves the response importable
+once the cause is fixed.
 
 Owner approval is a separate action and lives in tools/video_project.py.
 Nothing in this module reads or writes an approval, and an import never
@@ -185,6 +192,7 @@ def prepare(
     instructions: str = "",
     slug: str = "",
     name: str | None = None,
+    depends_on: Iterable["Request | dict"] = (),
 ) -> Request:
     """Write <directory>/<name or stage>.request.json and return it.
 
@@ -193,7 +201,17 @@ def prepare(
     `expects_ids`, when given, is the exact set of ids the response must
     answer. Leave it None for stages where the assistant creates the ids
     (claim extraction, card specs).
+    `depends_on` lists earlier requests (or {"stage", "request_id"} dicts)
+    whose responses must already be imported before this one can be. Import
+    refuses with `missing_stage` otherwise. Put the earlier stage's output
+    file in `inputs` as well, so a change to it makes this request stale.
     """
+    dependencies = []
+    for dep in depends_on:
+        data = dep.data if isinstance(dep, Request) else dep
+        if not isinstance(data, dict) or not data.get("stage") or not data.get("request_id"):
+            raise HandoffError("bad_request", "depends_on entries need a stage and a request_id")
+        dependencies.append({"stage": data["stage"], "request_id": data["request_id"]})
     if not stage or "/" in stage:
         raise HandoffError("bad_stage", "stage must be a non-empty name without slashes")
     input_specs: dict[str, dict] = {}
@@ -217,6 +235,7 @@ def prepare(
         "slug": slug,
         "inputs": input_specs,
         "expects": expects,
+        "depends_on": dependencies,
         "payload": payload,
         "instructions": instructions,
     }
@@ -402,6 +421,22 @@ def _append_ledger(path: Path, record: dict) -> None:
     _atomic_write(path, json.dumps({"imports": imports}, indent=2) + "\n")
 
 
+def check_dependencies(request: dict, ledger: Path) -> None:
+    """Every stage the request depends on must already be in the ledger."""
+    entries = read_ledger(ledger)
+    for dep in request.get("depends_on") or []:
+        if not any(
+            entry.get("stage") == dep["stage"] and entry.get("request_id") == dep["request_id"]
+            for entry in entries
+        ):
+            raise HandoffError(
+                "missing_stage",
+                f"stage {dep['stage']!r} has not been imported for this run",
+                stage=dep["stage"],
+                request_id=dep["request_id"],
+            )
+
+
 def already_imported(ledger: Path, request_id: str, response_sha256: str) -> bool:
     return any(
         entry.get("request_id") == request_id and entry.get("response_sha256") == response_sha256
@@ -430,6 +465,8 @@ def import_response(
     ledger = ledger_path_for(request.path)
 
     items = validate_response(request.data, response, item_validator=item_validator)
+
+    check_dependencies(request.data, ledger)
 
     if already_imported(ledger, request.request_id, response_sha):
         return ImportResult(
@@ -480,6 +517,7 @@ def main(argv: list[str] | None = None) -> int:
             response_path = Path(args.response) if args.response else request.response_path
             response = _load_json(response_path, "response")
             items = validate_response(request.data, response)
+            check_dependencies(request.data, ledger_path_for(request.path))
         except HandoffError as exc:
             print(json.dumps(exc.to_dict(), indent=2), file=sys.stderr)
             return 1

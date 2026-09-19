@@ -213,6 +213,95 @@ class TestImportRefuses(HandoffCase):
         self.assert_rejected("bad_json", request)
 
 
+class TestSequentialStages(HandoffCase):
+    """A later stage cannot land before the stage it depends on, and a change
+    to the earlier stage's output makes the later request stale."""
+
+    def chain(self):
+        package = self.dir / "package.md"
+        package.write_text("## Chapters\n0:00 Intro\n", encoding="utf-8")
+        first = self.prepare(stage="pipeline.package", inputs={"transcript": self.interview})
+        second = self.prepare(
+            stage="pipeline.chapter-review",
+            inputs={"transcript": self.interview, "package": package},
+            depends_on=[first],
+            expects_ids=["ch0"],
+        )
+        return first, second, package
+
+    def test_dependency_is_recorded(self):
+        first, second, _ = self.chain()
+        self.assertEqual(second.data["depends_on"], [{"stage": "pipeline.package", "request_id": first.request_id}])
+
+    def test_later_stage_refused_until_earlier_stage_is_imported(self):
+        first, second, _ = self.chain()
+        self.response_for(second, [{"id": "ch0", "ok": True}])
+        self.assert_rejected("missing_stage", second)
+        self.response_for(first, [{"id": "pkg"}])
+        self.do_import(first)
+        result = self.do_import(second)
+        self.assertEqual(result.status, "applied")
+        self.assertEqual(len(self.applied), 2)
+
+    def test_changed_package_after_review_request_is_stale(self):
+        first, second, package = self.chain()
+        self.response_for(first, [{"id": "pkg"}])
+        self.do_import(first)
+        self.applied.clear()
+        self.response_for(second, [{"id": "ch0", "ok": True}])
+        package.write_text("## Chapters\n0:00 Intro\n1:30 Revised\n", encoding="utf-8")
+        with self.assertRaises(handoff.HandoffError) as ctx:
+            self.do_import(second)
+        self.assertEqual(ctx.exception.code, "stale_input")
+        self.assertEqual(ctx.exception.details.get("role"), "package")
+        self.assertEqual(self.applied, [])
+
+    def test_dependency_on_a_different_run_does_not_count(self):
+        first, second, _ = self.chain()
+        other = self.prepare(stage="pipeline.package", inputs={"transcript": self.interview}, payload={"other": 1})
+        self.response_for(other, [{"id": "pkg"}])
+        self.do_import(other)
+        self.applied.clear()
+        self.response_for(second, [{"id": "ch0"}])
+        self.assert_rejected_keeping_ledger("missing_stage", second)
+
+    def assert_rejected_keeping_ledger(self, code, request):
+        with self.assertRaises(handoff.HandoffError) as ctx:
+            self.do_import(request)
+        self.assertEqual(ctx.exception.code, code)
+        self.assertEqual(self.applied, [])
+
+    def test_cli_validate_reports_missing_stage(self):
+        _, second, _ = self.chain()
+        self.response_for(second, [{"id": "ch0"}])
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            code = handoff.main(["validate", "--request", str(second.path)])
+        self.assertEqual(code, 1)
+        self.assertEqual(json.loads(err.getvalue())["error"], "missing_stage")
+
+
+class TestApplyFailure(HandoffCase):
+    def test_failed_apply_is_not_recorded_and_can_be_retried(self):
+        request = self.prepare()
+        self.response_for(request, [{"id": "c1"}])
+        calls = []
+
+        def flaky(items):
+            calls.append(items)
+            if len(calls) == 1:
+                raise RuntimeError("disk full")
+            return "ok"
+
+        with self.assertRaises(RuntimeError):
+            handoff.import_response(request.path, apply=flaky)
+        self.assertEqual(handoff.read_ledger(handoff.ledger_path_for(request.path)), [])
+        result = handoff.import_response(request.path, apply=flaky)
+        self.assertEqual(result.status, "applied")
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(handoff.read_ledger(handoff.ledger_path_for(request.path))), 1)
+
+
 class TestQuoteMatching(unittest.TestCase):
     def test_exact_and_whitespace_tolerant_match(self):
         source = "the coffee\n  break test works"
@@ -288,6 +377,56 @@ class TestApprovalsUntouched(unittest.TestCase):
         self.assertEqual(after["state"], before["state"])
         for gate in self.vp.GATE_ARTIFACTS:
             self.assertFalse(self.vp.approval_is_current(after, gate), gate)
+
+
+class TestApprovalGoesStale(TestApprovalsUntouched):
+    """An owner approval is bound to the exact bytes approved. The final-article
+    gate (T10) inherits this; the blog gate proves the mechanism today."""
+
+    def approve_blog(self, content: str) -> Path:
+        draft = self.root / "draft.md"
+        draft.write_text(content, encoding="utf-8")
+        self.vp.attach_artifact(slug="handoff-pilot", kind="blog_draft", raw_path=str(draft))
+        project = self.vp.load_project("handoff-pilot")
+        project["state"] = "blog-review"
+        self.vp.save_project(project)
+        self.vp.approve_gate(slug="handoff-pilot", gate="blog", approved_by="owner")
+        self.assertTrue(self.vp.approval_is_current(self.vp.load_project("handoff-pilot"), "blog"))
+        return draft
+
+    def test_in_place_edit_invalidates_the_approval(self):
+        draft = self.approve_blog("approved text\n")
+        draft.write_text("approved text, then edited after approval\n", encoding="utf-8")
+        self.assertFalse(self.vp.approval_is_current(self.vp.load_project("handoff-pilot"), "blog"))
+
+    def test_reattaching_a_changed_file_invalidates_the_approval(self):
+        draft = self.approve_blog("approved text\n")
+        draft.write_text("second version\n", encoding="utf-8")
+        self.vp.attach_artifact(slug="handoff-pilot", kind="blog_draft", raw_path=str(draft))
+        self.assertFalse(self.vp.approval_is_current(self.vp.load_project("handoff-pilot"), "blog"))
+
+    def test_deleted_file_invalidates_the_approval(self):
+        draft = self.approve_blog("approved text\n")
+        draft.unlink()
+        self.assertFalse(self.vp.approval_is_current(self.vp.load_project("handoff-pilot"), "blog"))
+
+    def test_restoring_the_approved_bytes_restores_the_approval(self):
+        draft = self.approve_blog("approved text\n")
+        draft.write_text("tampered\n", encoding="utf-8")
+        self.assertFalse(self.vp.approval_is_current(self.vp.load_project("handoff-pilot"), "blog"))
+        draft.write_text("approved text\n", encoding="utf-8")
+        self.assertTrue(self.vp.approval_is_current(self.vp.load_project("handoff-pilot"), "blog"))
+
+    def test_import_after_approval_does_not_refresh_a_stale_approval(self):
+        draft = self.approve_blog("approved text\n")
+        draft.write_text("edited\n", encoding="utf-8")
+        request = handoff.prepare(stage="article.review", directory=self.root, inputs={"draft": draft})
+        request.response_path.write_text(json.dumps({
+            "schema_version": 1, "request_id": request.request_id, "stage": "article.review",
+            "inputs": {"draft": request.data["inputs"]["draft"]["sha256"]}, "items": [{"id": "r1"}],
+        }), encoding="utf-8")
+        handoff.import_response(request.path, apply=lambda items: None)
+        self.assertFalse(self.vp.approval_is_current(self.vp.load_project("handoff-pilot"), "blog"))
 
 
 class TestCLI(HandoffCase):

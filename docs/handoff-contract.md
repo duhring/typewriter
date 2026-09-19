@@ -71,6 +71,9 @@ Checked in this order. The first failure is reported and nothing is applied.
 | `unknown_ids` | The response answered IDs the request did not ask about. |
 | `quote_not_found` | A stage that requires verbatim quotes could not find one in the source. |
 | `item_invalid` | The stage's own item check failed for some other reason. |
+| `missing_stage` | The request depends on an earlier stage whose response has not been imported for this run. |
+
+A failed apply is not recorded. The ledger gains a record only after the stage's work completes, so a crash mid-apply leaves the response importable once the cause is fixed.
 
 To check a response without applying it:
 
@@ -91,6 +94,16 @@ python3 tools/handoff.py ledger path/to/directory
 ## Sequential stages
 
 Where a stage depends on an earlier one, the handoffs run in sequence inside one recorded run, each with its own request and response. The challenge gate is three: extract claims, then challenge (after PKA verifies quotes and retrieves evidence), then context review (after the proposed verdicts exist). The YouTube package is two: the package, bound to the transcript and source inputs, then chapter review, bound to the imported package's hash.
+
+A later request records the earlier one under `depends_on` as a stage and request ID. Import refuses the later response with `missing_stage` until the earlier response is in the ledger. The earlier stage's output file is also listed in the later request's `inputs`, so editing it after the later request was prepared makes that request stale.
+
+```json
+"depends_on": [{"stage": "pipeline.package", "request_id": "9f1c2a7b3d4e5f60"}]
+```
+
+## Approvals stay bound to bytes
+
+An owner approval records the hash of every file it covers. It goes stale when a changed file is re-attached, and also when an approved file is edited in place, deleted, or replaced without a re-attach. Restoring the exact approved bytes restores the approval. No import refreshes a stale approval; only the owner approving again does.
 
 ## For stage tool authors
 
