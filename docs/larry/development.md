@@ -182,7 +182,7 @@ It reports retread risk against the archive (blog, transcripts, briefs, wiki), c
 Handoff to CueCam when the owner is ready:
 
 ```
-discord-bridge/venv/bin/python3 tools/cuecam.py from-file --file owners-inbox/development/<slug>/outline.md --title "<working title>"
+bin/pka cuecam from-file --file owners-inbox/development/<slug>/outline.md --title "<working title>"
 ```
 
 ## Stage Log — measuring the experiment

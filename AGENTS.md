@@ -1,6 +1,36 @@
 # AGENTS.md — Practical Contract for Coding Agents
 
-This file is the working contract for any coding agent (Sable, Claude Code sessions, Codex sessions, etc.) operating inside the PKA repo. For high-level orientation, read [llms.txt](llms.txt) first. For Larry's routing constitution, see [CLAUDE.md](CLAUDE.md).
+This file is the working contract for any assistant operating inside the PKA repo: the owner's chosen AI assistant running the workflows below, and any coding agent changing the tools. It is written for any assistant that can read files and run commands; nothing here depends on a particular product. For high-level orientation, read [llms.txt](llms.txt) first. For Larry's routing constitution, see [CLAUDE.md](CLAUDE.md).
+
+## Your role in the workflows
+
+You do the thinking; PKA prepares material, validates what comes back, records every run, and never approves anything. Each editorial step is a handoff (`docs/handoff-contract.md`): a tool writes `<stage>.request.json`, you read it and the inputs it names, write `<stage>.response.json` beside it, and the tool imports it. Import refuses stale, incomplete, or unverifiable answers and applies a valid one exactly once. Owner approval is a command the owner gives, never something an import creates. No model service or key is involved; your own subscription is the only account.
+
+### Develop: topic to CueCam bundle
+
+Procedure and file formats: `docs/larry/development.md`. Files live in `owners-inbox/development/<slug>/`. Worked example with every response file: `tests/acceptance/develop.sh`.
+
+```
+(interview the owner; save interview.md)
+bin/pka challenge --slug S extract prepare --source owners-inbox/development/S/interview.md
+(write challenge.extract-claims.response.json)      bin/pka challenge --slug S extract import
+(write challenge.verdicts.response.json)            bin/pka challenge --slug S verdicts import
+(write challenge.context-review.response.json)      bin/pka challenge --slug S context-review import
+(owner rules; owner_override in claims.json)        bin/pka challenge --slug S refresh
+(write outline.md from cleared claims)
+bin/pka balance_check --slug S prepare --outline owners-inbox/development/S/outline.md
+(write balance-check.analysis.response.json)        bin/pka balance_check --slug S import
+(write brief.md and the card spec)                  bin/pka cuecam compose --spec-file <spec> --title "<title>"
+bin/pka video_project create --title "<title>" --slug S --entry develop
+bin/pka video_project sync-development --slug S; advance; approve --gate brief; advance; advance;
+  attach --kind cuecam_bundle --path <bundle>; approve --gate deck; advance; advance   # -> complete
+```
+
+`bin/pka challenge --slug S status` and `bin/pka video_project status --slug S` say what to do next. The project completes on a current deck approval and the delivered bundle; no video material is required.
+
+### Publish and article
+
+Being moved onto the same handoff shape. Until their sections land here, follow `docs/larry/video-production.md` and `docs/larry/youtube-writing.md`.
 
 ## Governing principle
 
@@ -36,7 +66,7 @@ Agent memory, conversation context, and platform-specific abstractions are not d
 Every durable markdown deliverable saved to `owners-inbox/` must be indexed:
 
 ```
-discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown \
+bin/pka pka_index index-markdown \
   --file <relative-path> --category <category>
 ```
 
@@ -48,21 +78,21 @@ Exceptions: workflows whose own tool handles indexing (CueCam intake, journal wr
 
 | Task | Command |
 |------|---------|
-| Health audit | `discord-bridge/venv/bin/python3 tools/pka_health.py` |
-| Harness audit | `discord-bridge/venv/bin/python3 tools/harness_audit.py` |
-| Index markdown | `discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown --file <path> --category <category>` |
-| Morning brief | `discord-bridge/venv/bin/python3 tools/morning-brief.py` |
-| Wiki audit | `discord-bridge/venv/bin/python3 tools/wiki_compile.py audit` |
-| Task record | `discord-bridge/venv/bin/python3 tools/task_record.py ...` |
-| Reconcile task DB | `discord-bridge/venv/bin/python3 tools/task_record.py sync-local` |
-| Task-record audit | `discord-bridge/venv/bin/python3 tools/task_record.py audit --stale-days 30` |
-| Health escalations | `discord-bridge/venv/bin/python3 tools/health_escalation.py list` |
-| Video project | `discord-bridge/venv/bin/python3 tools/video_project.py ...` |
-| Final-master QC | `discord-bridge/venv/bin/python3 tools/video_qc.py <video> --project <slug>` |
-| Records CLI | `discord-bridge/venv/bin/python3 tools/records.py ...` |
+| Health audit | `bin/pka pka_health` |
+| Harness audit | `bin/pka harness_audit` |
+| Index markdown | `bin/pka pka_index index-markdown --file <path> --category <category>` |
+| Morning brief | `bin/pka morning-brief` |
+| Wiki audit | `bin/pka wiki_compile audit` |
+| Task record | `bin/pka task_record ...` |
+| Reconcile task DB | `bin/pka task_record sync-local` |
+| Task-record audit | `bin/pka task_record audit --stale-days 30` |
+| Health escalations | `bin/pka health_escalation list` |
+| Video project | `bin/pka video_project ...` |
+| Final-master QC | `bin/pka video_qc <video> --project <slug>` |
+| Records CLI | `bin/pka records ...` |
 | Run viewer | Serve repo root over HTTP (e.g. `python3 -m http.server 8000`), open `viewer.html` |
 
-Use `discord-bridge/venv/bin/python3` for tool invocations — that venv has the required deps.
+Run every tool through `bin/pka <tool>`; it finds the Python environment bootstrap created.
 
 ## Substantial coding-session close
 
