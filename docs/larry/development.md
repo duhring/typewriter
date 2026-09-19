@@ -132,8 +132,16 @@ The challenge gate and the balance check are complementary, not redundant: the c
 
 Before the brief is final, run:
 
+One handoff (`docs/handoff-contract.md`): PKA runs the lexical retread scan and writes the report with the analysis pending, the assistant answers the request, PKA verifies every contradiction quote verbatim against the cited source and rewrites the report.
+
 ```
-discord-bridge/venv/bin/python3 tools/balance_check.py --outline owners-inbox/development/<slug>/outline.md --slug <slug>
+bin/pka balance_check prepare --outline owners-inbox/development/<slug>/outline.md --slug <slug>
+#   -> balance-check.md (retread table, analysis pending); balance-check.analysis.request.json
+#   -> write balance-check.analysis.response.json: one item per finding
+#      (contradiction with a verbatim quote, retread_note, or brand_drift); [] when nothing qualifies
+bin/pka balance_check import --slug <slug>
+#   -> quotes checked; a finding whose quote is not in the source is refused; balance-check.md rewritten
+bin/pka balance_check prepare ... --lexical-only     # retread scan only
 ```
 
 It reports retread risk against the archive (blog, transcripts, briefs, wiki), contradiction candidates with verbatim quotes, and brand drift against the brand-system doc. Then:
