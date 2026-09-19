@@ -267,27 +267,31 @@ The three drafts stay separate artifacts because the delta between them is the
 evidence this process was built to produce.
 
 ```bash
-tools/video_project.py attach --slug <slug> --kind blog_draft --path <first-draft.md>
-tools/video_project.py advance --slug <slug> --to blog-review
-tools/video_project.py attach --slug <slug> --kind blog_owner_edit --path <owner-edit.md>
-tools/video_project.py attach --slug <slug> --kind blog_final --path <final.md>
-tools/video_project.py approve --slug <slug> --gate blog --by John
-tools/video_project.py advance --slug <slug> --to blog-approved
+bin/pka video_project attach --slug <slug> --kind blog_draft --path <first-draft.md>
+bin/pka video_project advance --slug <slug> --to blog-review
+bin/pka video_project approve --slug <slug> --gate blog --by <owner>        # the developmental draft
+bin/pka video_project advance --slug <slug> --to blog-approved
+bin/pka video_project attach --slug <slug> --kind blog_owner_edit --path <owner-edit.md>
+bin/pka video_project attach --slug <slug> --kind blog_final --path <final.md>
+bin/pka video_project approve --slug <slug> --gate blog_final --by <owner>  # the exact final file
+bin/pka video_project advance --slug <slug> --to blog-final-approved
 ```
 
 **7e. Publish.** Attach the published file, then record the URL:
 
 ```bash
-tools/video_project.py attach --slug <slug> --kind published_blog --path <published.md>
-tools/video_project.py publication --slug <slug> --channel substack --url <url>
-tools/video_project.py advance --slug <slug> --to complete
+bin/pka video_project attach --slug <slug> --kind published_blog --path <published.md>
+bin/pka video_project publication --slug <slug> --channel substack --url <url>
+bin/pka video_project advance --slug <slug> --to complete
 ```
 
-The `blog` gate still requires only `blog_draft`, and the loop still runs inside
-the existing `blog-review` → `blog-approved` window. `blog_owner_edit`,
-`blog_final`, and the thesis confirmation are recorded but not yet gated; whether
-any of them should become a gate is a question for the first few runs that use
-this, not a decision to make in advance.
+Two gates. The `blog` gate covers the developmental draft and opens the owner's
+edit. The `blog_final` gate covers the reconciled final article and is bound to
+that exact file: editing it after approval makes the approval stale until the
+owner approves again. An article-entry project completes on the final gate and
+delivers `blog_final`; a standalone article uses the intake interview as its
+source in place of a transcript. `blog_owner_edit` and the thesis confirmation
+are recorded but not gated.
 
 ## 8. Measurement
 

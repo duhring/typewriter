@@ -43,6 +43,7 @@ STATE_SEQUENCE = [
     "published",
     "blog-review",
     "blog-approved",
+    "blog-final-approved",
     "complete",
 ]
 
@@ -54,17 +55,17 @@ STATE_SEQUENCE = [
 # before entry points exist have no `entries` and keep the full sequence.
 ENTRIES = ("develop", "publish", "article")
 ENTRY_FIRST_STATE = {"develop": "developing", "publish": "master-qc", "article": "blog-review"}
-ENTRY_LAST_STATE = {"develop": "deck-approved", "publish": "published", "article": "blog-approved"}
+ENTRY_LAST_STATE = {"develop": "deck-approved", "publish": "published", "article": "blog-final-approved"}
 ENTRY_NEXT_ACTION = {
     "develop": "Run the intake interview and assemble the first brief.",
     "publish": "Attach the edited final master and its QC report, then approve the master.",
-    "article": "Attach the source (transcript or interview) and start the reflective interview.",
+    "article": "Attach the source (a transcript, or the intake interview for a standalone piece) and start the reflective interview.",
 }
 ENTRY_DELIVERABLE = {
     "develop": "Deck approved and CueCam bundle delivered. Record with CueCam; when an edited master exists, "
                "continue this project into publish.",
     "publish": "Video released and publication recorded. Continue this project into article for a written piece.",
-    "article": "Final article approved and delivered.",
+    "article": "Final article approved as the exact file on disk and delivered.",
 }
 
 
@@ -93,8 +94,8 @@ def workflow_sequence(project: dict) -> list[str]:
 def configure_outputs(*, slug: str, requested_outputs: list[str], publication_mode: str) -> dict:
     """Explicit opt-in for existing work; preserve every prior event and approval."""
     project = load_project(slug)
-    if set(requested_outputs) not in ({"video"}, {"video", "article"}):
-        raise ValueError("requested_outputs must be video or video plus article")
+    if set(requested_outputs) not in ({"video"}, {"video", "article"}, {"article"}):
+        raise ValueError("requested_outputs must be video, video plus article, or article")
     if publication_mode not in {"owner", "automated-private"}:
         raise ValueError("publication_mode must be owner or automated-private")
     previous = {key: project.get(key) for key in ("requested_outputs", "publication_mode")}
@@ -144,11 +145,22 @@ def entry_completion(project: dict) -> dict:
         materials = delivery_artifacts(project)
         _require(project, "youtube" in project.get("publications", {}), "YouTube publication record is missing")
         return materials
-    # article: the draft gate today; the final-article gate arrives with the article entry work.
-    draft = current_artifact(project, "blog_draft")
-    _require(project, draft is not None, "Article delivery is missing the blog draft")
-    _require(project, approval_is_current(project, "blog"), "Article delivery requires a current blog approval")
-    return {"blog_draft": dict(draft)}
+    # article: the reconciled final, approved as the exact file on disk.
+    final = current_artifact(project, "blog_final")
+    _require(project, final is not None, "Article delivery is missing the final article (blog_final)")
+    _require(project, approval_is_current(project, "blog_final"),
+             "Article delivery requires a current final-article approval")
+    return {"blog_final": dict(final)}
+
+
+def _is_article_entry(project: dict) -> bool:
+    return bool(project.get("entries")) and project["entries"][-1] == "article"
+
+
+def article_source(project: dict) -> dict | None:
+    """The transcript when the article follows a video; the intake interview
+    when it stands alone. Either satisfies the editorial loop's source."""
+    return current_artifact(project, "transcript") or current_artifact(project, "interview")
 
 
 def validate_completion(project: dict) -> dict | None:
@@ -212,12 +224,16 @@ ARTIFACT_FLOW = {
     # Second editorial loop. John's own staging, from the intake interview:
     # reflective interview after the recording -> confirmed thesis -> first draft
     # for manual editing -> owner's substantive edit -> reconciled final.
-    "editorial_interview": {"stage": "editorial", "expected_inputs": ["transcript"]},
+    # The source is a transcript when the article follows a video, or the intake
+    # interview when the article stands alone; `source_alternatives` names the
+    # stand-in for the transcript in that case.
+    "editorial_interview": {"stage": "editorial", "expected_inputs": ["transcript"], "source_alternatives": ["interview"]},
     "blog_thesis": {"stage": "editorial", "expected_inputs": ["editorial_interview"]},
-    "substack_brief": {"stage": "editorial", "expected_inputs": ["blog_thesis", "transcript"]},
+    "substack_brief": {"stage": "editorial", "expected_inputs": ["blog_thesis", "transcript"], "source_alternatives": ["interview"]},
     "blog_draft": {
         "stage": "editorial",
         "expected_inputs": ["blog_thesis", "substack_brief", "transcript"],
+        "source_alternatives": ["interview"],
     },
     "blog_owner_edit": {"stage": "editorial", "expected_inputs": ["blog_draft"]},
     "blog_final": {"stage": "editorial", "expected_inputs": ["blog_owner_edit"]},
@@ -232,6 +248,7 @@ GATE_ARTIFACTS = {
     "package": ["final_master", "youtube_package", "thumbnail"],
     "release": ["final_master", "youtube_package", "thumbnail"],
     "blog": ["blog_draft"],
+    "blog_final": ["blog_final"],
 }
 GATE_OPTIONAL_ARTIFACTS = {
     "brief": [
@@ -270,6 +287,7 @@ GATE_STATES = {
     "package": "package-review",
     "release": "youtube-qa",
     "blog": "blog-review",
+    "blog_final": "blog-approved",
 }
 # An observation is a claim about the pipeline, so it outlives the run that
 # raised it: proposed -> accepted -> implemented -> verified, or rejected.
@@ -918,9 +936,11 @@ def create_project(*, title: str, slug: str | None, summary: str,
     }
     if entry:
         project["entries"] = [entry]
+    if requested_outputs is None and entry:
+        requested_outputs = ["article"] if entry == "article" else ["video"]
     if requested_outputs is not None:
-        if set(requested_outputs) not in ({"video"}, {"video", "article"}):
-            raise ValueError("requested_outputs must be video or video plus article")
+        if set(requested_outputs) not in ({"video"}, {"video", "article"}, {"article"}):
+            raise ValueError("requested_outputs must be video, video plus article, or article")
         if publication_mode not in {"owner", "automated-private"}:
             raise ValueError("publication_mode must be owner or automated-private")
         project["requested_outputs"] = sorted(set(requested_outputs))
@@ -1118,8 +1138,13 @@ def _validate_target(project: dict, target: str) -> dict | None:
         "youtube-qa": (youtube_qa_complete(project), "private YouTube QA is incomplete"),
         "release-approved": (approval_is_current(project, "release"), "release approval is missing or stale"),
         "published": ("youtube" in project.get("publications", {}), "YouTube publication record is missing"),
-        "blog-review": (current_artifact(project, "blog_draft") is not None, "blog draft is missing"),
+        "blog-review": (current_artifact(project, "blog_draft") is not None
+                        and (not _is_article_entry(project) or article_source(project) is not None),
+                        "blog draft is missing" if current_artifact(project, "blog_draft") is None
+                        else "article source is missing: attach a transcript or an interview"),
         "blog-approved": (approval_is_current(project, "blog"), "blog approval is missing or stale"),
+        "blog-final-approved": (approval_is_current(project, "blog_final"),
+                                "final-article approval is missing or stale"),
     }
     if target in requirements:
         _require(project, *requirements[target])
@@ -2024,7 +2049,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--title", required=True)
     p.add_argument("--slug")
     p.add_argument("--summary", default="")
-    p.add_argument("--outputs", nargs="+", choices=["video", "article"], default=["video"])
+    p.add_argument("--outputs", nargs="+", choices=["video", "article"],
+                   help="Defaults to video, or article for --entry article")
     p.add_argument("--publication-mode", choices=["owner", "automated-private"], default="owner")
     p.add_argument("--entry", choices=list(ENTRIES),
                    help="Where the project starts: develop (topic -> CueCam bundle), publish (edited master -> "
@@ -2164,8 +2190,9 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     if args.command == "create":
+        outputs = args.outputs if args.outputs is not None else (None if args.entry else ["video"])
         result = create_project(title=args.title, slug=args.slug, summary=args.summary,
-                                requested_outputs=args.outputs, publication_mode=args.publication_mode,
+                                requested_outputs=outputs, publication_mode=args.publication_mode,
                                 entry=args.entry)
     elif args.command == "continue":
         result = continue_project(slug=args.slug, into=args.into, note=args.note)

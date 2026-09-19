@@ -71,7 +71,8 @@ class TestSequences(EntryCase):
     def test_article_runs_editorial_states_only(self):
         project = self.create("article")
         self.assertEqual(project["state"], "blog-review")
-        self.assertEqual(vp.workflow_sequence(project), ["blog-review", "blog-approved", "complete"])
+        self.assertEqual(vp.workflow_sequence(project), ["blog-review", "blog-approved", "blog-final-approved", "complete"])
+        self.assertEqual(project["requested_outputs"], ["article"])
 
     def test_legacy_projects_keep_the_full_sequence(self):
         project = self.create(None)
@@ -221,19 +222,74 @@ class TestPublishAndArticleCompletion(EntryCase):
         self.assertEqual(after["deliveries"][0]["entry"], "publish")
         self.assertIn("into article", after["next_action"])
 
-    def test_article_completion_requires_blog_approval(self):
+    def article_through_draft_approval(self, source_kind="transcript"):
         self.create("article")
+        self.attach(source_kind, f"{source_kind}.md", "# Source\n")
         self.attach("blog_draft", "draft.md", "# Draft\n")
-        self.set_state("blog-approved")
-        with self.assertRaisesRegex(ValueError, "blog approval"):
-            vp.advance_project(slug="pilot", target=None)
-        self.set_state("blog-review")
+        vp.advance_project(slug="pilot", target=None) if vp.load_project("pilot")["state"] != "blog-review" else None
         self.approve("blog")
         vp.advance_project(slug="pilot", target="blog-approved")
+        return vp.load_project("pilot")
+
+    def test_article_completes_on_final_article_approval_only(self):
+        self.article_through_draft_approval()
+        with self.assertRaisesRegex(ValueError, "final-article approval"):
+            vp.advance_project(slug="pilot", target=None)
+        self.attach("blog_owner_edit", "owner-edit.md", "# Draft, edited\n")
+        final = self.attach("blog_final", "final.md", "# Final\n")
+        self.approve("blog_final")
+        vp.advance_project(slug="pilot", target="blog-final-approved")
+        before = vp.load_project("pilot")
         vp.advance_project(slug="pilot", target=None)
         after = vp.load_project("pilot")
         self.assertEqual(after["state"], "complete")
         self.assertEqual(after["deliveries"][0]["entry"], "article")
+        self.assertEqual(list(after["deliveries"][0]["artifacts"]), ["blog_final"])
+        self.assertEqual(after["deliveries"][0]["artifacts"]["blog_final"]["sha256"], vp.hash_path(final))
+        self.assertEqual(sorted(after["approvals"]), ["blog", "blog_final"])
+        self.assertEqual(after["approvals"], before["approvals"])
+
+    def test_final_article_approval_is_bound_to_the_exact_file(self):
+        self.article_through_draft_approval()
+        final = self.attach("blog_final", "final.md", "# Final\n")
+        self.approve("blog_final")
+        final.write_text("# Final, touched after approval\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "final-article approval"):
+            vp.advance_project(slug="pilot", target="blog-final-approved")
+        final.write_text("# Final\n", encoding="utf-8")
+        vp.advance_project(slug="pilot", target="blog-final-approved")
+        self.assertEqual(vp.load_project("pilot")["state"], "blog-final-approved")
+
+    def test_final_gate_cannot_be_approved_before_the_draft_gate(self):
+        self.create("article")
+        self.attach("transcript")
+        self.attach("blog_draft", "draft.md", "# Draft\n")
+        self.attach("blog_final", "final.md", "# Final\n")
+        with self.assertRaisesRegex(ValueError, "Cannot approve blog_final"):
+            self.approve("blog_final")
+
+    def test_interview_is_an_accepted_source_for_a_standalone_article(self):
+        project = self.article_through_draft_approval(source_kind="interview")
+        self.assertEqual(project["state"], "blog-approved")
+        self.assertIsNotNone(vp.article_source(project))
+        self.assertEqual(vp.ARTIFACT_FLOW["editorial_interview"]["source_alternatives"], ["interview"])
+
+    def test_article_without_any_source_cannot_enter_review(self):
+        # An article project is created at blog-review, so the requirement is
+        # checked on the transition into it; drive that check directly.
+        self.create("article")
+        self.attach("blog_draft", "draft.md", "# Draft\n")
+        with self.assertRaisesRegex(ValueError, "article source"):
+            vp._validate_target(vp.load_project("pilot"), "blog-review")
+        self.attach("interview", "interview.md", "# Interview\n")
+        vp._validate_target(vp.load_project("pilot"), "blog-review")
+
+    def test_article_only_output_is_legal_for_legacy_configuration(self):
+        self.create(None)
+        with self.assertRaisesRegex(ValueError, "video, video plus article, or article"):
+            vp.configure_outputs(slug="pilot", requested_outputs=["audio"], publication_mode="owner")
+        vp.configure_outputs(slug="pilot", requested_outputs=["article"], publication_mode="owner")
+        self.assertEqual(vp.load_project("pilot")["requested_outputs"], ["article"])
 
 
 if __name__ == "__main__":

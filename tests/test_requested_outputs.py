@@ -132,12 +132,16 @@ class RequestedOutputs(unittest.TestCase):
             vp.record_youtube_qa(slug='test', passed=[], not_applicable=[])
         self.assertEqual(vp._manifest_path('test').read_bytes(), before)
 
-    def test_cli_defaults_and_invalid_article_only(self):
+    def test_cli_defaults_and_invalid_outputs(self):
+        # --outputs is resolved in main: video for a legacy create, article for --entry article.
         args = vp.build_parser().parse_args(['create', '--title', 'Example'])
-        self.assertEqual((args.outputs, args.publication_mode), (['video'], 'owner'))
-        with self.assertRaisesRegex(ValueError, 'video plus article'):
-            vp.create_project(title='Invalid', slug='invalid', summary='', requested_outputs=['article'])
+        self.assertEqual((args.outputs, args.publication_mode), (None, 'owner'))
+        with self.assertRaisesRegex(ValueError, 'video, video plus article, or article'):
+            vp.create_project(title='Invalid', slug='invalid', summary='', requested_outputs=['audio'])
         self.assertFalse(vp._manifest_path('invalid').exists())
+        # Article alone is a legal output since the article entry exists.
+        vp.create_project(title='Article', slug='article-only', summary='', requested_outputs=['article'])
+        self.assertEqual(vp.load_project('article-only')['requested_outputs'], ['article'])
 
 
 if __name__ == '__main__':
