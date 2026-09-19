@@ -404,8 +404,8 @@ def build_brief(*, title: str, mode: str, source_url: str, meta: dict,
             rel = f"{frames_rel}/{Path(f['path']).name}"
             lines.append(f"- **[{_fmt_ts(f['timestamp_seconds'])}]** "
                          f"{_nearest_cue(cues, f['timestamp_seconds'])[:90]} · `{rel}`")
-        lines.append("\n_Hero frames double as thumbnail-grounding references for "
-                     "`generate_thumbnail.py` (gpt-image-1)._\n")
+        lines.append("\n_Hero frames double as reference frames for the supplied thumbnail artwork "
+                     "(attach with `video_project attach --kind thumbnail_reference`)._\n")
     elif mode == "hyperframes":
         lines.append("## Anchor Candidates\n")
         lines.append("Verbatim cue text nearest each shot change — anchor *candidates*, "

@@ -274,8 +274,8 @@ def parse_package(md_path: Path) -> dict:
 
     # --- Thumbnail prompt ---
     # Everything under "## 3. Thumbnail Prompt" up to the next section or EOF.
-    # Returned as-is (plain markdown prose) so generate_thumbnail.py receives the
-    # full rich prompt that Maven authored.
+    # Returned as-is: it is the brief for the artwork the owner supplies (or
+    # makes with an image-capable assistant). Nothing here generates an image.
     thumb_section = re.search(
         r'##\s*3\.\s*Thumbnail Prompt(.*?)(?=\n##|\Z)', text, re.DOTALL | re.IGNORECASE
     )
@@ -429,115 +429,6 @@ def cmd_upload(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_thumbnail(args: argparse.Namespace) -> int:
-    """
-    Generate a thumbnail from the Maven package's thumbnail prompt.
-
-    Steps:
-      1. Read the thumbnail prompt from the package file.
-      2. Optionally collect reference image paths (--images or interactive).
-      3. Delegate to generate_thumbnail.py, streaming its progress output.
-      4. Print a JSON result with the saved thumbnail path.
-    """
-    # Resolve package
-    if args.latest:
-        package_path = find_latest_package()
-        if not package_path:
-            print("--latest: no package files found in owners-inbox/youtube/.", file=sys.stderr)
-            return 1
-    else:
-        if not args.package:
-            print("Provide --package or use --latest.", file=sys.stderr)
-            return 1
-        package_path = Path(args.package)
-        if not package_path.exists():
-            print(f"Package file not found: {package_path}", file=sys.stderr)
-            return 1
-
-    data = parse_package(package_path)
-    thumbnail_prompt = data.get("thumbnail_prompt", "")
-    if not thumbnail_prompt:
-        print("No thumbnail prompt found in package (expected '## 3. Thumbnail Prompt' section).", file=sys.stderr)
-        return 1
-
-    # Show a short preview of the prompt
-    preview = thumbnail_prompt[:300] + ("…" if len(thumbnail_prompt) > 300 else "")
-    print(f"\nPackage  : {package_path.name}", file=sys.stderr)
-    print(f"\nThumbnail prompt preview:\n{preview}\n", file=sys.stderr)
-
-    # Collect reference images
-    image_paths: list[Path] = []
-
-    if args.images:
-        for p in args.images:
-            path = Path(p).expanduser()
-            if not path.exists():
-                print(f"Image not found: {path}", file=sys.stderr)
-                return 1
-            image_paths.append(path)
-    elif not args.yes:
-        print(
-            "Do you have additional reference images to include in the thumbnail?\n"
-            "Enter one or more file paths separated by spaces, or press Enter to skip:",
-            file=sys.stderr,
-        )
-        user_input = input("> ").strip()
-        if user_input:
-            for raw in user_input.split():
-                path = Path(raw.strip()).expanduser()
-                if not path.exists():
-                    print(f"Warning: image not found, skipping: {path}", file=sys.stderr)
-                else:
-                    image_paths.append(path)
-
-    if image_paths:
-        print(
-            f"\nUsing {len(image_paths)} reference image(s): "
-            + ", ".join(p.name for p in image_paths),
-            file=sys.stderr,
-        )
-    else:
-        print("No reference images — generating from prompt only.", file=sys.stderr)
-
-    # Derive output slug from package filename (strip leading date)
-    slug = args.slug or re.sub(r'^\d{4}-\d{2}-\d{2}-', '', package_path.stem)
-
-    # Build subprocess command
-    cmd = [
-        sys.executable,
-        str(PKA_ROOT / "tools" / "generate_thumbnail.py"),
-        thumbnail_prompt,
-        "--slug", slug,
-        "--model", args.model,
-    ]
-    if image_paths:
-        cmd += ["--images"] + [str(p) for p in image_paths]
-
-    print(f"\nGenerating thumbnail…\n", file=sys.stderr)
-
-    # Stream stderr (progress) live; capture stdout (the saved path)
-    proc = subprocess.run(cmd, capture_output=True, text=True)
-    if proc.stderr:
-        print(proc.stderr, end="", file=sys.stderr)
-    if proc.returncode != 0:
-        return proc.returncode
-
-    thumbnail_path = proc.stdout.strip()
-    result = {
-        "status": "ok",
-        "thumbnail": thumbnail_path,
-        "package": str(package_path),
-        "model": args.model,
-        "images_used": [str(p) for p in image_paths],
-    }
-    print(json.dumps(result, indent=2))
-    return 0
-
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
-
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Upload videos to YouTube using Maven package files for metadata."
@@ -549,26 +440,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     p_titles = sub.add_parser("titles", help="List title options from a package file")
     p_titles.add_argument("--package", required=True, help="Path to Maven package .md file")
-
-    p_thumb = sub.add_parser("thumbnail", help="Generate thumbnail from Maven package prompt")
-    p_thumb.add_argument("--package", help="Path to Maven package .md file")
-    p_thumb.add_argument(
-        "--latest", action="store_true",
-        help="Auto-detect the newest package file in owners-inbox/youtube/"
-    )
-    p_thumb.add_argument(
-        "--images", nargs="*", metavar="PATH",
-        help="Reference image file paths (passed to generate_thumbnail.py --images)"
-    )
-    p_thumb.add_argument("--slug", help="Override output filename slug (default: derived from package name)")
-    p_thumb.add_argument(
-        "--model", default="gpt-image-1",
-        help="Image generation model (default: gpt-image-1)"
-    )
-    p_thumb.add_argument(
-        "--yes", "-y", action="store_true",
-        help="Skip interactive image-path prompt"
-    )
 
     p_upload = sub.add_parser("upload", help="Upload video to YouTube")
     p_upload.add_argument("--video", help="Path to final video file")
@@ -610,8 +481,6 @@ def main() -> int:
         return cmd_doctor(args)
     if args.command == "titles":
         return cmd_titles(args)
-    if args.command == "thumbnail":
-        return cmd_thumbnail(args)
     if args.command == "upload":
         return cmd_upload(args)
     parser.error(f"Unknown command: {args.command}")

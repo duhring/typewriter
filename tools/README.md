@@ -13,7 +13,6 @@ One line per tool, grouped by domain. Run everything with `discord-bridge/venv/b
 | `video_project.py` | Manual-first video state, artifact identities, approvals, publication, and metrics |
 | `video_qc.py` | Final-master technical QC plus indexed human-review checklist |
 | `pipeline.py` | Separate approved-master package and private-upload phases; explicit one-shot exception |
-| `generate_thumbnail.py` | YouTube thumbnail via OpenAI Images API |
 | `publish_to_youtube.py` | Upload video using a Maven package .md for metadata |
 | `watch_video_capture.py` | Frame-aware video watching (scene-detection frames + transcript) |
 | `extract_structured.py` | Structured extracts from transcripts and meeting notes |
