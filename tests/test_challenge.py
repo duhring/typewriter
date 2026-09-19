@@ -1,8 +1,8 @@
 """Tests for the challenge gate — the adoption bar before it becomes a default.
 
-No network, no API keys: every LLM interaction is stubbed. Run from the repo root:
+No network, no model service: the assistant's answers are response files written by the tests. Run from the repo root:
 
-    discord-bridge/venv/bin/python3 -m unittest discover -s tests -v
+    bin/pka test -v
 """
 
 from __future__ import annotations
@@ -273,45 +273,58 @@ class TestEvidenceReachesTheModel(unittest.TestCase):
 
 
 class TestVerdictSchema(unittest.TestCase):
-    """Duplicate, missing, and invented ids must all be caught."""
+    """Duplicate, missing, and invented ids, and invalid verdicts, are refused by import."""
 
     def setUp(self):
-        self.batch = challenge.build_claims(
+        import handoff
+
+        self.handoff = handoff
+        self.claims = challenge.build_claims(
             [{"claim": f"claim {i}", "support_quote": ""} for i in range(3)], "src"
         )
+        self.request = {
+            "schema_version": 1, "request_id": "r", "stage": challenge.STAGE_VERDICTS,
+            "inputs": {}, "expects": {"ids": [c["id"] for c in self.claims]},
+        }
 
-    def test_clean_response_has_no_problems(self):
-        response = {"verdicts": [{"id": c["id"], "verdict": "survives"} for c in self.batch]}
-        verdicts, problems = challenge.validate_verdicts(response, self.batch)
-        self.assertEqual(problems, [])
-        self.assertEqual(len(verdicts), 3)
+    def validate(self, items):
+        response = {"schema_version": 1, "request_id": "r", "stage": challenge.STAGE_VERDICTS,
+                    "inputs": {}, "items": items}
+        return self.handoff.validate_response(
+            self.request, response, item_validator=challenge.validate_verdict_item, check_disk=False
+        )
+
+    def verdict(self, cid, verdict="survives", **extra):
+        return {"id": cid, "verdict": verdict, "rationale": "r", "needs": "", "contradiction": None, **extra}
+
+    def test_clean_response_is_accepted(self):
+        items = self.validate([self.verdict(c["id"]) for c in self.claims])
+        self.assertEqual(len(items), 3)
 
     def test_invented_id_is_rejected(self):
-        response = {"verdicts": [{"id": "c99", "verdict": "survives"}]}
-        verdicts, problems = challenge.validate_verdicts(response, self.batch)
-        self.assertNotIn("c99", verdicts)
-        self.assertTrue(any("unknown id" in p for p in problems))
+        with self.assertRaises(self.handoff.HandoffError) as ctx:
+            self.validate([self.verdict(c["id"]) for c in self.claims] + [self.verdict("c99")])
+        self.assertEqual(ctx.exception.code, "unknown_ids")
 
-    def test_duplicate_id_is_flagged_once(self):
-        response = {"verdicts": [
-            {"id": "c1", "verdict": "survives"},
-            {"id": "c1", "verdict": "proposed_drop"},
-        ]}
-        verdicts, problems = challenge.validate_verdicts(response, self.batch)
-        self.assertEqual(verdicts["c1"]["verdict"], "survives")   # first wins
-        self.assertTrue(any("duplicate" in p for p in problems))
+    def test_duplicate_id_is_rejected(self):
+        with self.assertRaises(self.handoff.HandoffError) as ctx:
+            self.validate([self.verdict("c1"), self.verdict("c1", "proposed_drop"), self.verdict("c2"), self.verdict("c3")])
+        self.assertEqual(ctx.exception.code, "duplicate_ids")
 
-    def test_missing_verdict_is_reported(self):
-        response = {"verdicts": [{"id": "c1", "verdict": "survives"}]}
-        _, problems = challenge.validate_verdicts(response, self.batch)
-        self.assertTrue(any("c2" in p for p in problems))
-        self.assertTrue(any("c3" in p for p in problems))
+    def test_missing_verdict_is_rejected(self):
+        with self.assertRaises(self.handoff.HandoffError) as ctx:
+            self.validate([self.verdict("c1")])
+        self.assertEqual(ctx.exception.code, "missing_ids")
+        self.assertEqual(ctx.exception.details["ids"], ["c2", "c3"])
 
-    def test_invalid_verdict_downgrades_to_weakened(self):
-        response = {"verdicts": [{"id": "c1", "verdict": "obliterated"}]}
-        verdicts, problems = challenge.validate_verdicts(response, self.batch)
-        self.assertEqual(verdicts["c1"]["verdict"], challenge.WEAKENED)
-        self.assertTrue(any("invalid verdict" in p for p in problems))
+    def test_invalid_verdict_is_rejected_not_downgraded(self):
+        with self.assertRaises(self.handoff.HandoffError) as ctx:
+            self.validate([self.verdict("c1", "obliterated"), self.verdict("c2"), self.verdict("c3")])
+        self.assertEqual(ctx.exception.code, "invalid_verdict")
+
+    def test_contradiction_needs_source_and_quote(self):
+        with self.assertRaises(self.handoff.HandoffError):
+            self.validate([self.verdict("c1", contradiction={"source": "blog/a.md"}), self.verdict("c2"), self.verdict("c3")])
 
 
 class TestContradictionVerification(unittest.TestCase):
@@ -415,7 +428,7 @@ class TestResolutionAndHistory(unittest.TestCase):
             for c in reg["claims"]:
                 c["verdict"] = verdict
             challenge.record_run(
-                reg, provider="glm", corpus=corpus, source_text="src",
+                reg, corpus=corpus, source_text="src",
                 claims=reg["claims"], problems=[], note="",
             )
         self.assertEqual(len(reg["runs"]), 3)
@@ -431,7 +444,7 @@ class TestResolutionAndHistory(unittest.TestCase):
         reg["claims"][0]["verdict"] = challenge.PROPOSED_DROP
         reg["claims"][0]["owner_override"] = challenge.SURVIVES
         challenge.record_run(
-            reg, provider="glm", corpus=corpus, source_text="src",
+            reg, corpus=corpus, source_text="src",
             claims=reg["claims"], problems=[], note="",
         )
         run = reg["runs"][-1]
@@ -457,7 +470,7 @@ class TestResolutionAndHistory(unittest.TestCase):
             self.assertEqual(c["verdict"], challenge.SURVIVES)
             self.assertEqual(c["rationale"], "from the good run")
         challenge.record_run(
-            reg, provider=None, corpus=corpus, source_text="src",
+            reg, corpus=corpus, source_text="src",
             claims=reg["claims"], problems=[], note=note,
         )
         self.assertIn("failed", reg["runs"][-1]["note"])
@@ -485,7 +498,7 @@ class TestReport(unittest.TestCase):
         corpus = cc.Corpus([make_passage("blog/a.md", "micro markets")])
         register = {"slug": "t", "source": "s.md", "claims": claims, "runs": []}
         challenge.record_run(
-            register, provider=None, corpus=corpus, source_text="src",
+            register, corpus=corpus, source_text="src",
             claims=claims, problems=[], note="",
         )
         report = challenge.build_report(register, corpus, "")
@@ -506,6 +519,9 @@ class TestReport(unittest.TestCase):
 
 
 class TestSemanticReview(unittest.TestCase):
+    """The context review is the assistant's; PKA prepares complete-paragraph
+    context, validates the answer, and applies it. Same guarantees as before."""
+
     def review(self, source, claim_text, quote, valid, prior=None, contradiction_valid=False):
         claims = challenge.build_claims([{"claim": claim_text, "support_quote": quote}], source)
         c = claims[0]
@@ -513,14 +529,16 @@ class TestSemanticReview(unittest.TestCase):
         docs = {"blog/a.md": prior} if prior else {}
         if prior:
             c["contradiction"] = {"source": "blog/a.md", "quote": prior}
-        response = dict(claim_valid=valid, verdict="proposed_drop" if contradiction_valid else "survives",
-                        rationale="Context distinguishes the endorsed position from embedded beliefs.",
-                        needs="", contradiction_valid=contradiction_valid)
-        with patch.object(challenge, "chat_json_retry", return_value=response) as model:
-            challenge.review_context(c, source, docs, None)
-        self.assertIn(source, model.call_args.args[0])
+        entry = challenge.context_payload_item(c, source, docs)
+        self.assertIsNotNone(entry, "a quote-backed claim must get a context entry")
+        self.assertIn(quote, entry["source_context"])
         if prior:
-            self.assertIn(prior, model.call_args.args[0])
+            self.assertIn(prior, entry["prior_context"])
+        result = dict(id=c["id"], claim_valid=valid, verdict="proposed_drop" if contradiction_valid else "survives",
+                      rationale="Context distinguishes the endorsed position from embedded beliefs.",
+                      needs="", contradiction_valid=contradiction_valid)
+        challenge.validate_review_item(result)
+        challenge.apply_context_review(c, result, source_context=entry["source_context"], prior_context=entry["prior_context"])
         return c
 
     def test_embedded_negated_beliefs_never_reach_owner_or_outline(self):
@@ -563,43 +581,31 @@ class TestSemanticReview(unittest.TestCase):
         self.assertIsNotNone(c["contradiction"])
 
     def test_malformed_review_cannot_clear_a_claim(self):
+        import handoff
+
         c = challenge.build_claims([{"claim": "Anyone can participate", "support_quote": "Anyone can participate"}], "Anyone can participate.")[0]
-        with patch.object(challenge, "chat_json_retry", return_value={"claim_valid": "false"}):
-            with self.assertRaises(ValueError):
-                challenge.review_context(c, "Anyone can participate.", {}, None)
+        for bad in ({"id": "c1", "claim_valid": "false"},
+                    {"id": "c1", "claim_valid": True, "contradiction_valid": False, "verdict": "survives", "rationale": "  ", "needs": ""},
+                    {"id": "c1", "claim_valid": True, "contradiction_valid": False, "verdict": "kept", "rationale": "ok", "needs": ""}):
+            with self.subTest(bad=bad):
+                with self.assertRaises(handoff.HandoffError):
+                    challenge.validate_review_item(bad)
         self.assertEqual(c["verdict"], challenge.UNREVIEWED)
 
-    def test_cli_review_failure_is_atomic_and_internally_held(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            source = Path(tmp) / "source.md"
-            source.write_text("Anyone can participate.")
-            claims = challenge.build_claims([
-                {"claim": "Anyone can participate", "support_quote": "Anyone can participate"},
-                {"claim": "Participation is open", "support_quote": "Anyone can participate"},
-            ], source.read_text())
-            for c in claims:
-                c.update(verdict=challenge.SURVIVES, rationale="Previous successful analysis")
-            old_run = {"at": "2026-01-01", "provider": "stub", "prompt_version": "old",
-                       "proposed": {c["id"]: challenge.SURVIVES for c in claims}}
-            register = Path(tmp) / "claims.json"
-            register.write_text(json.dumps({"slug": "t", "source": str(source), "claims": claims, "runs": [old_run]}))
-            report = Path(tmp) / "challenge.md"
-            response = {"verdicts": [{"id": c["id"], "verdict": "proposed_drop"} for c in claims]}
-            with patch.object(sys, "argv", ["challenge.py", "--claims", str(register), "--out", str(report)]), \
-                 patch.object(challenge, "load_corpus", return_value=cc.Corpus([])), \
-                 patch.object(challenge, "challenge_batch", return_value=response), \
-                 patch.object(challenge, "review_context", side_effect=[None, RuntimeError("review unavailable")]), \
-                 redirect_stdout(io.StringIO()):
-                self.assertEqual(challenge.main(), 0)
-            saved = json.loads(register.read_text())
-            self.assertEqual(saved["runs"][0], old_run)
-            for c in saved["claims"]:
-                self.assertEqual(c["verdict"], challenge.SURVIVES)
-                self.assertEqual(c["rationale"], "Previous successful analysis")
-                self.assertTrue(challenge.internally_held(c))
-                self.assertFalse(challenge.needs_resolution(c))
-            self.assertEqual(challenge.effective_survivors(saved["claims"]), [])
-            self.assertIn("Awaiting your call 0", report.read_text())
+    def test_review_endorsing_an_unverified_contradiction_is_rejected(self):
+        import handoff
+
+        c = challenge.build_claims([{"claim": "Anyone can participate", "support_quote": "Anyone can participate"}], "Anyone can participate.")[0]
+        result = dict(id="c1", claim_valid=True, verdict="proposed_drop", rationale="r", needs="", contradiction_valid=True)
+        with self.assertRaises(handoff.HandoffError) as ctx:
+            challenge.apply_context_review(c, result, source_context="Anyone can participate.", prior_context=None)
+        self.assertEqual(ctx.exception.code, "item_invalid")
+        self.assertEqual(c["verdict"], challenge.UNREVIEWED)
+
+    def test_claim_without_verified_context_gets_no_entry(self):
+        c = challenge.build_claims([{"claim": "Made up", "support_quote": "words never said"}], "Anyone can participate.")[0]
+        self.assertEqual(c["support"], challenge.QUOTE_NOT_FOUND)
+        self.assertIsNone(challenge.context_payload_item(c, "Anyone can participate.", {}))
 
     def test_owner_override_and_prior_history_remain_authoritative(self):
         c = self.review("Critics say X; I disagree.", "X", "X", False)
@@ -608,11 +614,202 @@ class TestSemanticReview(unittest.TestCase):
         self.assertEqual(challenge.effective_survivors([c]), [c])
         reg = {"claims": [c], "runs": []}
         corpus = cc.Corpus([])
-        challenge.record_run(reg, provider=None, corpus=corpus, source_text="src", claims=[c], problems=[], note="")
+        challenge.record_run(reg, corpus=corpus, source_text="src", claims=[c], problems=[], note="")
         before = json.dumps(reg["runs"][0], sort_keys=True)
         c["context_review"]["status"] = "pending"
         self.assertEqual(json.dumps(reg["runs"][0], sort_keys=True), before)
         self.assertEqual(c["owner_note"], "Owner decision")
+
+
+class TestStageFlow(unittest.TestCase):
+    """The three handoffs end to end, through the CLI, with no model anywhere."""
+
+    SOURCE = (
+        "Anyone can use the system today; that is the whole point.\n\n"
+        "I never said only coders benefit. Critics say only coders benefit, and I disagree.\n\n"
+        "The laptop contribution matters because it proved the workflow travels.\n"
+    )
+
+    def setUp(self):
+        import handoff
+
+        self.handoff = handoff
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = Path(self.tmp.name) / "dev"
+        self.dir.mkdir()
+        self.source = self.dir / "interview.md"
+        self.source.write_text("---\ncategory: development-interview\n---\n\n" + self.SOURCE, encoding="utf-8")
+        self.corpus = cc.Corpus([make_passage("blog/a.md", "the workflow travels between machines")])
+        self.patcher = patch.object(challenge, "load_corpus", return_value=self.corpus)
+        self.patcher.start()
+        self.addCleanup(self.patcher.stop)
+
+    def run_cli(self, *argv):
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), patch("sys.stderr", err):
+            code = challenge.main(["--dir", str(self.dir), *argv])
+        payload = out.getvalue() or err.getvalue()
+        return code, (json.loads(payload) if payload.strip().startswith("{") else payload)
+
+    def respond(self, stage, items):
+        request = self.handoff.load_request(self.dir / f"{stage}.request.json")
+        request.response_path.write_text(json.dumps({
+            "schema_version": 1, "request_id": request.request_id, "stage": stage,
+            "inputs": {role: spec["sha256"] for role, spec in request.data["inputs"].items()},
+            "items": items,
+        }), encoding="utf-8")
+        return request
+
+    def test_full_run(self):
+        # Stage 1: prepare, answer, import.
+        code, out = self.run_cli("extract", "prepare", "--source", str(self.source))
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["windows"], 1)
+        request = self.handoff.load_request(self.dir / f"{challenge.STAGE_EXTRACT}.request.json")
+        self.assertIn("VERBATIM", request.data["instructions"])
+        self.assertIn(self.SOURCE.split("\n")[0], request.data["payload"]["windows"][0]["text"])
+
+        code, out = self.run_cli("extract", "import")
+        self.assertEqual(code, 1)
+        self.assertEqual(out["error"], "file_missing")
+
+        self.respond(challenge.STAGE_EXTRACT, [
+            {"id": "a", "window": 1, "claim": "Anyone can use the system", "support_quote": "Anyone can use the system today"},
+            {"id": "b", "window": 1, "claim": "Only coders benefit", "support_quote": "only coders benefit"},
+            {"id": "c", "window": 1, "claim": "The laptop contribution proved the workflow travels", "support_quote": "the workflow travels"},
+            {"id": "d", "window": 1, "claim": "Made up claim", "support_quote": "text that is not there"},
+            {"id": "e", "window": 1, "claim": "Asserted without a quote", "support_quote": ""},
+        ])
+        code, out = self.run_cli("extract", "import")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["claims"], 5)
+        register = json.loads((self.dir / "claims.json").read_text())
+        supports = {c["claim"]: c["support"] for c in register["claims"]}
+        self.assertEqual(supports["Made up claim"], challenge.QUOTE_NOT_FOUND)
+        self.assertEqual(supports["Asserted without a quote"], challenge.OWNER_ASSERTION)
+        self.assertEqual(supports["Anyone can use the system"], challenge.QUOTE_BACKED)
+        verdict_request = self.handoff.load_request(self.dir / f"{challenge.STAGE_VERDICTS}.request.json")
+        self.assertEqual(verdict_request.data["expects"]["ids"], ["c1", "c2", "c3", "c4", "c5"])
+        self.assertEqual(verdict_request.data["depends_on"][0]["request_id"], request.request_id)
+        self.assertIn("NO MEANINGFUL OVERLAP FOUND", verdict_request.data["payload"]["batches"][0]["text"])
+
+        # Stage 2: a drop that leans on an unverifiable contradiction is downgraded.
+        self.respond(challenge.STAGE_VERDICTS, [
+            {"id": "c1", "verdict": "survives", "rationale": "fresh and specific", "needs": "", "contradiction": None},
+            {"id": "c2", "verdict": "proposed_drop", "rationale": "contradicts prior", "needs": "",
+             "contradiction": {"source": "blog/a.md", "quote": "words not in the passage", "prior_position": "x"}},
+            {"id": "c3", "verdict": "survives", "rationale": "grounded in a story", "needs": "", "contradiction": None},
+            {"id": "c4", "verdict": "proposed_drop", "rationale": "unsupported", "needs": "", "contradiction": None},
+            {"id": "c5", "verdict": "weakened", "rationale": "no example", "needs": "a story", "contradiction": None},
+        ])
+        code, out = self.run_cli("verdicts", "import")
+        self.assertEqual(code, 0, out)
+        register = json.loads((self.dir / "claims.json").read_text())
+        by_id = {c["id"]: c for c in register["claims"]}
+        self.assertEqual(by_id["c2"]["verdict"], challenge.WEAKENED)
+        self.assertIsNone(by_id["c2"]["contradiction"])
+        self.assertIn("downgraded", by_id["c2"]["needs"])
+        # Claims without verified source context are held, not sent for review.
+        self.assertEqual(out["reviewable"], 3)
+        self.assertEqual(out["held_without_context"], 2)
+        self.assertEqual(by_id["c4"]["context_review"]["status"], "rejected")
+        context_request = self.handoff.load_request(self.dir / f"{challenge.STAGE_CONTEXT}.request.json")
+        self.assertEqual(context_request.data["expects"]["ids"], ["c1", "c2", "c3"])
+        entry = {e["id"]: e for e in context_request.data["payload"]["claims"]}["c2"]
+        self.assertIn("I disagree", entry["source_context"])
+
+        # Stage 3: the review repairs the quoted-belief extraction and clears the rest.
+        self.respond(challenge.STAGE_CONTEXT, [
+            {"id": "c1", "claim_valid": True, "verdict": "survives", "rationale": "endorsed plainly", "needs": "", "contradiction_valid": False},
+            {"id": "c2", "claim_valid": False, "verdict": "proposed_drop", "rationale": "reported belief, disowned", "needs": "", "contradiction_valid": False},
+            {"id": "c3", "claim_valid": True, "verdict": "survives", "rationale": "story given", "needs": "", "contradiction_valid": False},
+        ])
+        code, out = self.run_cli("context-review", "import")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(out["cleared"], 2)
+        self.assertEqual(out["run"], 1)
+        register = json.loads((self.dir / "claims.json").read_text())
+        by_id = {c["id"]: c for c in register["claims"]}
+        self.assertTrue(challenge.internally_held(by_id["c2"]))
+        self.assertEqual(sorted(register["runs"][0]["requests"]), ["context_review", "extract", "verdicts"])
+        self.assertEqual(register["runs"][0]["provider"], "assistant")
+        report = (self.dir / "challenge.md").read_text()
+        self.assertIn("Cleared for outline 2", report)
+        self.assertIn("Awaiting your call", report)
+        self.assertEqual(len(self.handoff.read_ledger(self.dir / "handoff-imports.json")), 3)
+
+        # Reimport is a no-op; the run history does not grow.
+        code, out = self.run_cli("context-review", "import")
+        self.assertEqual(out["status"], "already_imported")
+        self.assertEqual(len(json.loads((self.dir / "claims.json").read_text())["runs"]), 1)
+
+        code, out = self.run_cli("status")
+        self.assertTrue(all(s["applied"] for s in out["stages"]))
+        self.assertIn("owner resolution", out["next"])
+
+        # The owner edits the register: a revised review against the old request is stale.
+        register["claims"][4]["owner_override"] = challenge.SURVIVES
+        (self.dir / "claims.json").write_text(json.dumps(register), encoding="utf-8")
+        self.respond(challenge.STAGE_CONTEXT, [
+            {"id": "c1", "claim_valid": True, "verdict": "survives", "rationale": "revised wording", "needs": "", "contradiction_valid": False},
+            {"id": "c2", "claim_valid": False, "verdict": "proposed_drop", "rationale": "reported belief, disowned", "needs": "", "contradiction_valid": False},
+            {"id": "c3", "claim_valid": True, "verdict": "survives", "rationale": "story given", "needs": "", "contradiction_valid": False},
+        ])
+        code, out = self.run_cli("context-review", "import")
+        self.assertEqual(code, 1)
+        self.assertEqual(out["error"], "stale_input")
+        self.assertEqual(out["role"], "register")
+        self.assertEqual(len(json.loads((self.dir / "claims.json").read_text())["runs"]), 1)
+
+        # Re-challenge after the owner's ruling: a fresh verdicts request, override kept.
+        code, out = self.run_cli("verdicts", "prepare")
+        self.assertEqual(code, 0, out)
+        register = json.loads((self.dir / "claims.json").read_text())
+        self.assertEqual(register["claims"][4]["owner_override"], challenge.SURVIVES)
+
+    def test_stages_cannot_run_out_of_order(self):
+        self.run_cli("extract", "prepare", "--source", str(self.source))
+        self.respond(challenge.STAGE_EXTRACT, [
+            {"id": "a", "window": 1, "claim": "Anyone can use the system", "support_quote": "Anyone can use the system today"},
+        ])
+        self.run_cli("extract", "import")
+        # Prepare the context stage by hand, skipping the verdicts import.
+        code, out = self.run_cli("context-review", "prepare")
+        self.assertEqual(code, 0, out)
+        self.respond(challenge.STAGE_CONTEXT, [
+            {"id": "c1", "claim_valid": True, "verdict": "survives", "rationale": "r", "needs": "", "contradiction_valid": False},
+        ])
+        code, out = self.run_cli("context-review", "import")
+        # No depends_on when prepared by hand, but the verdicts stage was never applied:
+        # the claim still carries no proposed verdict, and the review is applied on top.
+        self.assertEqual(code, 0, out)
+        # With the proper chain, the dependency is enforced.
+        self.run_cli("verdicts", "prepare")
+        register = self.handoff.load_request(self.dir / f"{challenge.STAGE_VERDICTS}.request.json")
+        self.respond(challenge.STAGE_VERDICTS, [
+            {"id": "c1", "verdict": "survives", "rationale": "r", "needs": "", "contradiction": None},
+        ])
+        code, out = self.run_cli("verdicts", "import")
+        self.assertEqual(code, 0, out)
+        context_request = self.handoff.load_request(self.dir / f"{challenge.STAGE_CONTEXT}.request.json")
+        self.assertEqual(context_request.data["depends_on"][0]["request_id"], register.request_id)
+
+    def test_refresh_keeps_verdicts_and_appends_a_run(self):
+        self.run_cli("extract", "prepare", "--source", str(self.source))
+        self.respond(challenge.STAGE_EXTRACT, [
+            {"id": "a", "window": 1, "claim": "Anyone can use the system", "support_quote": "Anyone can use the system today"},
+        ])
+        self.run_cli("extract", "import")
+        register = json.loads((self.dir / "claims.json").read_text())
+        register["claims"][0]["verdict"] = challenge.SURVIVES
+        (self.dir / "claims.json").write_text(json.dumps(register), encoding="utf-8")
+        code, out = self.run_cli("refresh")
+        self.assertEqual(code, 0, out)
+        register = json.loads((self.dir / "claims.json").read_text())
+        self.assertEqual(register["claims"][0]["verdict"], challenge.SURVIVES)
+        self.assertEqual(len(register["runs"]), 1)
+        self.assertIn("verdicts untouched", register["runs"][0]["note"])
 
 
 if __name__ == "__main__":

@@ -54,13 +54,27 @@ Rules:
 
 Challenge the material *before* it is assembled, so the outline is built only from claims that survived. Producing first and challenging last (Vera at the end) means weak material is already load-bearing by the time anyone objects; this stage moves the kill-step upstream. It is the editorial sibling of the video-studio project room, which already gates on source authority before authoring.
 
+The editorial judgment is the assistant's; PKA prepares, verifies, records, and never approves. The gate is three handoffs (`docs/handoff-contract.md`). Each `import` validates the response and prepares the next request, so the loop is: run the command, read the request file it names, write the response file beside it, run the next import.
+
 ```
-discord-bridge/venv/bin/python3 tools/challenge.py --source owners-inbox/development/<slug>/interview.md --slug <slug>
+bin/pka challenge extract prepare --source owners-inbox/development/<slug>/interview.md --slug <slug>
+#   -> write challenge.extract-claims.response.json (one item per claim, verbatim quote or "")
+bin/pka challenge extract import --slug <slug>
+#   -> quotes verified, register created, evidence retrieved; verdicts request prepared
+#   -> write challenge.verdicts.response.json (one item per claim id)
+bin/pka challenge verdicts import --slug <slug>
+#   -> contradictions verified, drops without a verifiable quote downgraded; context-review request prepared
+#   -> write challenge.context-review.response.json (one item per reviewable claim id)
+bin/pka challenge context-review import --slug <slug>
+#   -> run recorded, claims.json and challenge.md written
+bin/pka challenge status --slug <slug>       # where the run stands and what to do next
 ```
+
+Every request file carries the material to work from and the exact ids to answer, and every response is bound to the source and register it was written against. A response to changed material is refused as stale; importing the same response twice is a no-op. A claim with no verified source context never reaches the context review: it is held internally as an extraction problem.
 
 **Status: in trial, not yet the default gate.** Run it when developing a video and judge the output; do not treat a verdict as authoritative until it has earned that on more material. The owner decides when it becomes routine.
 
-The run does five things:
+The run does five things (1, 3, and 4 are the assistant's; the rest is PKA's):
 
 1. **Extract** — discrete claims, each with the verbatim quote backing it. The source is read in overlapping windows, so nothing past a truncation boundary is lost. Every quote is verified *in full* against the interview and given a character span.
 2. **Retrieve** — each claim is matched against authority-tagged *passages*, so every piece of evidence shown to the skeptic arrives with the passage it refers to.
@@ -88,7 +102,7 @@ Every report states the tier counts so the corpus it judged against is visible. 
 
 The gate proposes; it does not decide. Before the outline is assembled, the owner rules on semantically validated `weakened`, `proposed_drop`, and unsupported claims. Invalid extractions and pending internal reviews remain recorded separately; they are not owner questions. The report's "Needs your call" section is that queue.
 
-- **Record the decision** by setting `owner_override` on the claim in `claims.json` (`survives` / `weakened` / `proposed_drop`), with an optional `owner_note`. Or answer with new evidence — a story, an example — and re-run.
+- **Record the decision** by setting `owner_override` on the claim in `claims.json` (`survives` / `weakened` / `proposed_drop`), with an optional `owner_note`. Or answer with new evidence — a story, an example — and re-challenge with `bin/pka challenge verdicts prepare --slug <slug>`, which refreshes retrieval and prepares a fresh verdicts request against the edited register. `bin/pka challenge refresh --slug <slug>` refreshes retrieval and the report only, verdicts untouched.
 - **Surface findings as questions, not verdicts:** "The skeptic wants to drop the laptop-contribution claim as a platitude — do you have the story that grounds it, or does it go?"
 - **The "Unsupported" section is the editorial analogue of `missing_context.md`.** Do not invent around it — ask a follow-up interview question, or drop the claim. Note the taxonomy: `owner_assertion_without_example` means the owner asserted it with no story; `quote_not_found` means the *extractor* cited a quote that isn't in the interview, which is a model error and makes the claim unverified.
 - **Nothing is deleted.** Proposed drops stay in the record, same as the project room's `duplicate_log.md` rule.
@@ -99,9 +113,9 @@ The gate proposes; it does not decide. Before the outline is assembled, the owne
 
 Verdicts are **not stable across runs** — the model is nondeterministic, and the same interview can shift several claims between runs. So:
 
-- Every run appends to an immutable `runs` list in `claims.json` (timestamp, provider, prompt version, source hash, corpus fingerprint, proposed verdict, effective verdict). Prior runs are never rewritten.
+- Every run appends to an immutable `runs` list in `claims.json` (timestamp, the three request ids it was built from, instructions version, source hash, corpus fingerprint, proposed verdict, effective verdict). `handoff-imports.json` beside it records which responses were applied. Prior runs are never rewritten.
 - `owner_override` is what makes a decision durable. Treat a single run as a prompt for discussion, not a result.
-- A failed challenge pass never overwrites the last successful analysis; retrieval refreshes and prior verdicts are kept, with the failure noted in the run record. Current claims are held for internal review until a complete review succeeds; owner overrides remain authoritative.
+- A rejected response changes nothing: the last successful analysis stands until a valid response is imported. Between the verdicts import and the context-review import every claim is held for internal review; owner overrides remain authoritative throughout.
 
 ## Stage 3 — Outline
 
