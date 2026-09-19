@@ -234,12 +234,30 @@ bin/pka video_project approve --slug <slug> --gate release --by John
 bin/pka video_project advance --slug <slug> --to release-approved
 ```
 
-Changing privacy in YouTube Studio remains a manual owner action. Afterward,
-record the public URL and advance:
+Changing privacy in YouTube Studio remains a manual owner action: the release
+is the owner's, never the tool's. Afterward, record the public URL and advance:
 
 ```bash
 bin/pka video_project publication --slug <slug> --channel youtube --url <url>
 bin/pka video_project advance --slug <slug> --to published
+bin/pka video_project advance --slug <slug>                 # complete
+```
+
+A publish-entry project completes on the delivered materials, the recorded
+public URL, and (in automated-private mode) a release approval that is still
+current: a master re-encoded after the release approval stales it, and
+completion is refused until the owner approves again.
+
+**Owner publication mode.** When the project was created with
+`--publication-mode owner`, the owner uploads and releases the video without
+PKA's private upload, QA checklist, or release gate. The sequence is
+`master-qc -> package-review -> package-approved -> published -> complete`, and
+the owner's recorded URL is the release:
+
+```bash
+bin/pka video_project publication --slug <slug> --channel youtube --url <url>
+bin/pka video_project advance --slug <slug> --to published
+bin/pka video_project advance --slug <slug>                 # complete
 ```
 
 ## 7. Editorial Loop and Substack Adaptation

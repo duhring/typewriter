@@ -62,7 +62,7 @@ class TestSequences(EntryCase):
         self.assertIn("develop entry", project["history"][0]["note"])
 
     def test_publish_starts_at_master_qc(self):
-        project = self.create("publish")
+        project = self.create("publish", publication_mode="automated-private")
         self.assertEqual(project["state"], "master-qc")
         self.assertEqual(vp.workflow_sequence(project), [
             "master-qc", "package-review", "package-approved", "private-upload", "youtube-qa",
@@ -198,29 +198,90 @@ class TestContinuation(EntryCase):
 
 
 class TestPublishAndArticleCompletion(EntryCase):
-    def test_publish_completion_requires_delivery_and_publication_record(self):
-        """T7 defines the shape; the publish entry's own ticket refines release and URL rules."""
-        self.create("publish")
+    def publish_ready(self, mode="owner"):
+        self.create("publish", publication_mode=mode)
         for kind in ["final_master", "qc_report", "transcript", "youtube_package", "thumbnail"]:
             self.attach(kind)
         vp.select_title(slug="pilot", title="Example")
         vp.select_thumbnail(slug="pilot", raw_path=str(self.root / "thumbnail.txt"))
         project = vp.load_project("pilot")
-        for gate in ["master", "package"]:
-            project["approvals"][gate] = {"approved_by": "Owner", "approved_at": "2026-09-01T12:00:00Z",
-                                          "artifact_hashes": vp._approval_hashes(project, gate)}
-        project["state"] = "published"
+        project["qc"] = {"status": "pass"}
         vp.save_project(project)
-        with self.assertRaisesRegex(ValueError, "YouTube publication record"):
+        self.approve("master")
+        vp.advance_project(slug="pilot", target="package-review")
+        self.approve("package")
+        vp.advance_project(slug="pilot", target="package-approved")
+        return vp.load_project("pilot")
+
+    def test_publish_in_owner_mode_skips_the_private_upload_states(self):
+        project = self.create("publish", publication_mode="owner")
+        self.assertEqual(vp.workflow_sequence(project),
+                         ["master-qc", "package-review", "package-approved", "published", "complete"])
+
+    def test_publish_in_automated_mode_keeps_qa_and_release_states(self):
+        project = self.create("publish", publication_mode="automated-private")
+        self.assertEqual(vp.workflow_sequence(project), [
+            "master-qc", "package-review", "package-approved", "private-upload", "youtube-qa",
+            "release-approved", "published", "complete"])
+
+    def test_owner_mode_completes_on_the_recorded_public_url(self):
+        self.publish_ready("owner")
+        with self.assertRaisesRegex(ValueError, "public URL is missing"):
             vp.advance_project(slug="pilot", target=None)
-        project = vp.load_project("pilot")
-        project["publications"]["youtube"] = {"url": "https://youtu.be/x", "confirmed_at": "2026-09-18T00:00:00Z"}
-        vp.save_project(project)
+        with self.assertRaisesRegex(ValueError, "publication URL is required"):
+            vp.record_publication(slug="pilot", channel="youtube", url="   ")
+        vp.record_publication(slug="pilot", channel="youtube", url="https://youtu.be/released")
+        vp.advance_project(slug="pilot", target=None)
+        self.assertEqual(vp.load_project("pilot")["state"], "published")
+        before = vp.load_project("pilot")
         vp.advance_project(slug="pilot", target=None)
         after = vp.load_project("pilot")
         self.assertEqual(after["state"], "complete")
         self.assertEqual(after["deliveries"][0]["entry"], "publish")
-        self.assertIn("into article", after["next_action"])
+        self.assertEqual(sorted(after["deliveries"][0]["artifacts"]), ["final_master", "thumbnail", "transcript", "youtube_package"])
+        self.assertEqual(after["approvals"], before["approvals"])
+        self.assertEqual(sorted(after["approvals"]), ["master", "package"])
+        self.assertEqual(after["publications"]["youtube"]["url"], "https://youtu.be/released")
+        self.assertIn("public URL recorded", after["next_action"])
+
+    def test_automated_mode_requires_the_owners_release_approval(self):
+        self.publish_ready("automated-private")
+        vp.record_youtube_private(slug="pilot", video_id="vid123", url="https://youtu.be/vid123",
+                                  privacy="private", title="Example")
+        self.assertEqual(vp.load_project("pilot")["state"], "private-upload", "recording the upload advances")
+        vp.record_youtube_qa(slug="pilot", passed=sorted(vp.YOUTUBE_QA_REQUIRED), not_applicable=[])
+        if vp.load_project("pilot")["state"] != "youtube-qa":
+            vp.advance_project(slug="pilot", target="youtube-qa")
+        with self.assertRaisesRegex(ValueError, "Project state must be release-approved"):
+            vp.record_publication(slug="pilot", channel="youtube", url="https://youtu.be/vid123")
+        self.approve("release")
+        vp.advance_project(slug="pilot", target="release-approved")
+        vp.record_publication(slug="pilot", channel="youtube", url="https://youtu.be/vid123")
+        vp.advance_project(slug="pilot", target="published")
+        # A master edited after the release approval stales it; completion is refused.
+        master = self.root / "final_master.txt"
+        master.write_text("re-encoded after release approval", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "changed on disk"):
+            vp.advance_project(slug="pilot", target=None)
+        master.write_text("final_master", encoding="utf-8")
+        vp.advance_project(slug="pilot", target=None)
+        after = vp.load_project("pilot")
+        self.assertEqual(after["state"], "complete")
+        self.assertEqual(sorted(after["approvals"]), ["master", "package", "release"])
+        self.assertEqual(after["youtube"]["privacy"], "public")
+
+    def test_automated_mode_completion_refuses_a_stale_release_approval(self):
+        self.publish_ready("automated-private")
+        project = vp.load_project("pilot")
+        project["state"] = "published"
+        project["publications"] = {"youtube": {"url": "https://youtu.be/x", "published_at": "2026-09-18T00:00:00Z"}}
+        vp.save_project(project)
+        with self.assertRaisesRegex(ValueError, "release approval"):
+            vp.advance_project(slug="pilot", target=None)
+
+    def test_package_does_not_expect_a_brief(self):
+        self.assertEqual(vp.ARTIFACT_FLOW["youtube_package"]["expected_inputs"], ["transcript"])
+        self.assertEqual(vp.ARTIFACT_FLOW["youtube_package"]["optional_inputs"], ["brief"])
 
     def article_through_draft_approval(self, source_kind="transcript"):
         self.create("article")

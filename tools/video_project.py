@@ -64,21 +64,30 @@ ENTRY_NEXT_ACTION = {
 ENTRY_DELIVERABLE = {
     "develop": "Deck approved and CueCam bundle delivered. Record with CueCam; when an edited master exists, "
                "continue this project into publish.",
-    "publish": "Video released and publication recorded. Continue this project into article for a written piece.",
+    "publish": "Video released by the owner and the public URL recorded. Continue this project into article for a written piece.",
     "article": "Final article approved as the exact file on disk and delivered.",
 }
 
 
-def entry_sequence(entries: list[str]) -> list[str]:
+# In owner publication mode the owner uploads and releases the video; PKA's
+# private-upload, QA, and release-approval states do not apply. The owner's
+# recorded public URL is the release, and `published` follows package approval.
+OWNER_MODE_SKIPPED_STATES = ("private-upload", "youtube-qa", "release-approved")
+
+
+def entry_sequence(entries: list[str], publication_mode: str = "automated-private") -> list[str]:
     first = STATE_SEQUENCE.index(ENTRY_FIRST_STATE[entries[0]])
     last = STATE_SEQUENCE.index(ENTRY_LAST_STATE[entries[-1]])
-    return STATE_SEQUENCE[first:last + 1] + ["complete"]
+    states = STATE_SEQUENCE[first:last + 1]
+    if publication_mode == "owner":
+        states = [s for s in states if s not in OWNER_MODE_SKIPPED_STATES]
+    return states + ["complete"]
 
 
 def workflow_sequence(project: dict) -> list[str]:
     """Absent output selection means the original contract, without migration."""
     if project.get("entries"):
-        return entry_sequence(project["entries"])
+        return entry_sequence(project["entries"], project.get("publication_mode", "automated-private"))
     if "requested_outputs" not in project:
         return list(STATE_SEQUENCE)
     sequence = STATE_SEQUENCE[:STATE_SEQUENCE.index("private-upload")]
@@ -143,7 +152,12 @@ def entry_completion(project: dict) -> dict:
         return {"cuecam_bundle": dict(bundle)}
     if entry == "publish":
         materials = delivery_artifacts(project)
-        _require(project, "youtube" in project.get("publications", {}), "YouTube publication record is missing")
+        publication = project.get("publications", {}).get("youtube") or {}
+        _require(project, bool(publication.get("url", "").strip()),
+                 "YouTube publication record with the public URL is missing")
+        if project.get("publication_mode") != "owner":
+            _require(project, approval_is_current(project, "release"),
+                     "Publish delivery requires a current release approval by the owner")
         return materials
     # article: the reconciled final, approved as the exact file on disk.
     final = current_artifact(project, "blog_final")
@@ -220,7 +234,9 @@ ARTIFACT_FLOW = {
     "transcript": {"stage": "master", "expected_inputs": ["final_master"]},
     "thumbnail_reference": {"stage": "packaging", "expected_inputs": ["final_master"]},
     "thumbnail": {"stage": "packaging", "expected_inputs": ["thumbnail_reference"]},
-    "youtube_package": {"stage": "packaging", "expected_inputs": ["transcript", "brief"]},
+    # The brief is packaging intent from the development stage; a project that
+    # entered at publish has none, so it is optional rather than expected.
+    "youtube_package": {"stage": "packaging", "expected_inputs": ["transcript"], "optional_inputs": ["brief"]},
     # Second editorial loop. John's own staging, from the intake interview:
     # reflective interview after the recording -> confirmed thesis -> first draft
     # for manual editing -> owner's substantive edit -> reconciled final.
@@ -1137,7 +1153,8 @@ def _validate_target(project: dict, target: str) -> dict | None:
         "private-upload": (bool(project.get("youtube", {}).get("video_id")), "private YouTube upload is missing"),
         "youtube-qa": (youtube_qa_complete(project), "private YouTube QA is incomplete"),
         "release-approved": (approval_is_current(project, "release"), "release approval is missing or stale"),
-        "published": ("youtube" in project.get("publications", {}), "YouTube publication record is missing"),
+        "published": (bool((project.get("publications", {}).get("youtube") or {}).get("url", "").strip()),
+                      "YouTube publication record with the public URL is missing"),
         "blog-review": (current_artifact(project, "blog_draft") is not None
                         and (not _is_article_entry(project) or article_source(project) is not None),
                         "blog draft is missing" if current_artifact(project, "blog_draft") is None
