@@ -170,15 +170,29 @@ approval is still required afterward.
 
 ## 5. Package Without Uploading
 
+The package and its chapter review are two sequential handoffs
+(`docs/handoff-contract.md`), both bound to the final-master transcript and kept
+in the project folder. PKA transcribes, checks every chapter against the
+timeline, saves, indexes, and attaches; the assistant writes the package and
+reviews the chapters.
+
 ```bash
-bin/pka pipeline.py package \
-  --project <slug> \
-  --reference-image <path> --reference-rights "owner-created"
+bin/pka pipeline package prepare --project <slug>
+#   -> transcribes the approved master; attaches the transcript;
+#      owners-inbox/video-projects/<slug>/pipeline.package.request.json (timed segments + format)
+#   -> write pipeline.package.response.json: one item, id "package", "markdown" = the whole package
+bin/pka pipeline package import --project <slug>
+#   -> chapters must start at 0:00 and fall on final-master segment boundaries, or the package is refused;
+#      package saved, indexed, attached; pipeline.chapter-review.request.json prepared, bound to that package file
+#   -> write pipeline.chapter-review.response.json: one item per chapter id, supported true|false, reason
+bin/pka pipeline chapter-review import --project <slug>
+#   -> every chapter must be supported; the project enters package-review. It never uploads.
 ```
 
-This transcribes the approved master, creates and indexes the YouTube package,
-optionally generates a thumbnail candidate, attaches everything, and stops in
-`package-review`. It never uploads.
+An unsupported chapter sends the package back to the assistant: revise it, re-import
+it, and review again. The thumbnail is supplied artwork: attach it with
+`bin/pka video_project attach --slug <slug> --kind thumbnail --path <image>`
+(and any reference with `--kind thumbnail_reference --rights "..."`).
 
 Review all materials together:
 
@@ -193,7 +207,7 @@ bin/pka video_project advance --slug <slug> --to package-approved
 ## 6. Private Upload and YouTube QA
 
 ```bash
-bin/pka pipeline.py upload --project <slug>
+bin/pka pipeline upload --project <slug>
 ```
 
 The upload is always private and applies the selected thumbnail. Then review in
@@ -400,7 +414,7 @@ retrospective so the run page is not a dead end.
 The cross-run view is Dreamer's, compiled from every manifest:
 
 ```bash
-bin/pka wiki_compile.py pipeline
+bin/pka wiki_compile pipeline
 ```
 
 That writes `wiki/operations/video-editorial-pipeline.md`: a run table, a stage
@@ -416,10 +430,10 @@ runs. Neither writes into the other's pages.
 For a low-stakes video where John explicitly declines manual gates:
 
 ```bash
-bin/pka pipeline.py one-shot --privacy private --yes
+(removed: there is no one-shot path; every publish runs through the reviewed stages above)
 ```
 
-Bare `pipeline.py` no longer launches the entire publish path accidentally.
+The one-shot path is gone; a package always passes through the assistant's chapter review and the owner's package approval before any upload.
 
 ## Requested outputs and owner publication
 

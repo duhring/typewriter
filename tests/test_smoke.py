@@ -65,11 +65,11 @@ class TestPipelineHelpers(unittest.TestCase):
         p = pipeline.cleaned_path(Path("/tmp/rec.mov"))
         self.assertEqual(p, Path("/tmp/rec_cleaned.mov"))
 
-    def test_generate_package_dry_run_makes_no_calls(self):
+    def test_package_instructions_name_the_required_sections(self):
         import pipeline
 
-        out = pipeline.generate_package("transcript text", dry_run=True)
-        self.assertIn("Title Options", out)
+        for header in pipeline.REQUIRED_HEADERS:
+            self.assertIn(header, pipeline.PACKAGE_INSTRUCTIONS)
 
 
 class TestLLMRouter(unittest.TestCase):
@@ -584,10 +584,7 @@ class TestVideoProjectWorkflow(unittest.TestCase):
         project["state"] = "master-qc"
         vp.save_project(project)
         vp.approve_gate(slug="pilot-video", gate="master", approved_by="John")
-        result = pipeline.package_project(SimpleNamespace(
-            project="pilot-video", video=None, dry_run=True,
-            no_thumbnail=False, reference_image=[], reference_rights="", yes=True,
-        ))
+        result = pipeline.package_prepare(SimpleNamespace(project="pilot-video", video=None, dry_run=True))
         self.assertEqual(result, 0)
         self.assertEqual(vp.load_project("pilot-video")["state"], "master-qc")
 
