@@ -2,11 +2,12 @@
 """
 Fetch a transcript from a YouTube URL/ID or a local video file.
 
-YouTube:  python3 fetch-transcript.py <url-or-video-id>
-Local:    python3 fetch-transcript.py /path/to/video.mov [--title "My Video"]
+YouTube:  bin/pka fetch-transcript <url-or-video-id>
+Local:    bin/pka fetch-transcript /path/to/video.mov [--title "My Video"]
 
-For local files, Whisper is used to transcribe before upload — so Maven can
-package the video before it ever hits YouTube.
+For local files, Whisper is used to transcribe locally. This tool only
+obtains the transcript; the structured extract is a separate handoff:
+  bin/pka extract_structured transcript prepare --file <saved transcript>
 """
 
 import importlib.util
@@ -26,7 +27,6 @@ from urllib.request import urlopen
 
 from youtube_transcript_api import YouTubeTranscriptApi
 
-from extract_structured import build_transcript_extract_artifact
 from pka_index import index_transcript_file
 
 
@@ -330,15 +330,8 @@ def main():
         except Exception as exc:
             print(f"Warning: transcript saved but could not be indexed ({exc}).", file=sys.stderr)
 
-        try:
-            build_transcript_extract_artifact(
-                transcript_path,
-                title=title,
-                source_url=str(video_path),
-            )
-            print("Saved structured transcript extract.", file=sys.stderr)
-        except Exception as exc:
-            print(f"Warning: transcript extract could not be created ({exc}).", file=sys.stderr)
+        print("Next, for a structured extract by your assistant:\n"
+              f"  bin/pka extract_structured transcript prepare --file {transcript_path}", file=sys.stderr)
 
         print(markdown)
         return
@@ -380,15 +373,8 @@ def main():
     except Exception as exc:
         print(f"Warning: transcript saved but could not be indexed ({exc}).", file=sys.stderr)
 
-    try:
-        build_transcript_extract_artifact(
-            transcript_path,
-            title=title,
-            source_url=canonical_video_url(video_id),
-        )
-        print("Saved structured transcript extract.", file=sys.stderr)
-    except Exception as exc:
-        print(f"Warning: transcript extract could not be created ({exc}).", file=sys.stderr)
+    print("Next, for a structured extract by your assistant:\n"
+          f"  bin/pka extract_structured transcript prepare --file {transcript_path}", file=sys.stderr)
 
     print(markdown)
 

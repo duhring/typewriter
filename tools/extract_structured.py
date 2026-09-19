@@ -2,7 +2,33 @@
 """
 Create structured extracts from transcripts and meeting notes.
 
-Outputs durable markdown artifacts to owners-inbox and indexes them into PKA.
+The extraction is the owner's assistant's; this tool prepares the request,
+validates the answer, writes the durable markdown artifact to owners-inbox,
+and indexes it. One handoff per extract (docs/handoff-contract.md):
+
+  bin/pka extract_structured transcript prepare --file owners-inbox/transcripts/<file>.md
+      -> <dir>/transcript-extract.request.json with the transcript text, title, and URL
+  (the assistant writes transcript-extract.response.json beside it: one item, id "extract")
+  bin/pka extract_structured transcript import --dir <dir>
+      -> owners-inbox/transcript-extracts/<date>-<slug>.md written and indexed
+
+  bin/pka extract_structured meeting prepare --file <notes.md> [--title --date --attendees --meeting-id N]
+  bin/pka extract_structured meeting import --dir <dir>
+
+<dir> defaults to owners-inbox/transcript-extracts/requests/<transcript stem>/
+(or owners-inbox/meeting-extracts/requests/<slug>/). Every timestamp a
+response cites must appear in the transcript; a response that cites one that
+does not is refused.
+
+Transcript extract item:
+  {"id": "extract", "summary": str,
+   "timestamp_highlights": [{"timestamp": str, "label": str}],
+   "key_points": [str], "reusable_claims": [str], "questions_raised": [str],
+   "action_ideas": [str], "tools_mentioned": [str], "recommended_tags": [str]}
+Meeting extract item:
+  {"id": "extract", "summary": str, "decisions": [str], "action_items": [str],
+   "open_questions": [str], "follow_up_topics": [str], "tools_mentioned": [str],
+   "recommended_tags": [str]}
 """
 
 from __future__ import annotations
@@ -16,13 +42,12 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-# Ensure tools/ is on sys.path so local modules (llm, pka_index, etc.) resolve from any cwd.
+# Ensure tools/ is on sys.path so local modules (handoff, pka_index) resolve from any cwd.
 _tools_dir = str(Path(__file__).resolve().parent)
 if _tools_dir not in sys.path:
     sys.path.insert(0, _tools_dir)
 
-import lmstudio
-import llm
+import handoff
 from pka_index import index_markdown_artifact
 
 
@@ -30,6 +55,13 @@ PKA_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = PKA_ROOT / "data" / "pka.db"
 TRANSCRIPT_EXTRACTS_DIR = PKA_ROOT / "owners-inbox" / "transcript-extracts"
 MEETING_EXTRACTS_DIR = PKA_ROOT / "owners-inbox" / "meeting-extracts"
+
+STAGE_TRANSCRIPT = "transcript-extract"
+STAGE_MEETING = "meeting-extract"
+TRANSCRIPT_LISTS = {"key_points": 8, "reusable_claims": 8, "questions_raised": 6,
+                    "action_ideas": 6, "tools_mentioned": 10, "recommended_tags": 10}
+MEETING_LISTS = {"decisions": 12, "action_items": 12, "open_questions": 8,
+                 "follow_up_topics": 8, "tools_mentioned": 10, "recommended_tags": 10}
 
 
 def _slugify(text: str, fallback: str) -> str:
@@ -40,14 +72,6 @@ def _slugify(text: str, fallback: str) -> str:
 
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
-
-
-def _extract_json(raw: str) -> dict[str, Any]:
-    text = raw.strip()
-    if text.startswith("```"):
-        text = re.sub(r"^```(?:json)?\s*", "", text)
-        text = re.sub(r"\s*```$", "", text)
-    return json.loads(text)
 
 
 def _extract_first_heading(text: str) -> str | None:
@@ -100,116 +124,77 @@ def _split_lines(text: str | None) -> list[str]:
     return items
 
 
-def _prompt_json(system: str, user: str, *, max_tokens: int = 1400) -> dict[str, Any]:
-    response = llm.chat(
-        [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user},
-        ],
-        temperature=0.1,
-        max_tokens=max_tokens,
-        label="extract_structured",
-    )
-    choices = response.get("choices", [])
-    if not choices:
-        raise llm.LLMError("LLM provider returned no choices.")
-    content = choices[0].get("message", {}).get("content", "")
-    return _extract_json(content)
-
-
 def _format_bullets(items: list[str]) -> list[str]:
     return [f"- {item}" for item in items] if items else ["- None."]
 
 
-def _transcript_system_prompt() -> str:
+def transcript_instructions() -> str:
     return (
-        "You extract structured knowledge from transcripts.\n"
-        "Return valid JSON only with this shape:\n"
-        "{"
-        "\"summary\": string,"
-        "\"timestamp_highlights\": [{\"timestamp\": string, \"label\": string}],"
-        "\"key_points\": [string],"
-        "\"reusable_claims\": [string],"
-        "\"questions_raised\": [string],"
-        "\"action_ideas\": [string],"
-        "\"tools_mentioned\": [string],"
-        "\"recommended_tags\": [string]"
-        "}\n"
+        "Extract structured knowledge from the transcript in payload.text (the file is also listed under inputs).\n"
+        "Write exactly one item with id \"extract\" and these fields:\n"
+        "  summary: string\n"
+        "  timestamp_highlights: [{timestamp: string, label: string}]\n"
+        "  key_points, reusable_claims, questions_raised, action_ideas, tools_mentioned, recommended_tags: [string]\n"
         "Rules:\n"
-        "- Be specific and concise.\n"
-        "- Use exact timestamps only when they clearly appear in the transcript.\n"
+        "- Be specific and concise; keep each list item short and standalone.\n"
+        "- Use a timestamp only when it appears in the transcript exactly as written; every cited timestamp is checked on import.\n"
         "- Prefer reusable claims that could help future writing or strategy work.\n"
-        "- Keep each list item short and standalone.\n"
-        "- No markdown fences."
+        "- An empty list is the correct answer when nothing qualifies."
     )
 
 
-def _meeting_system_prompt() -> str:
+def meeting_instructions() -> str:
     return (
-        "You extract structured meeting knowledge from notes or transcripts.\n"
-        "Return valid JSON only with this shape:\n"
-        "{"
-        "\"summary\": string,"
-        "\"decisions\": [string],"
-        "\"action_items\": [string],"
-        "\"open_questions\": [string],"
-        "\"follow_up_topics\": [string],"
-        "\"tools_mentioned\": [string],"
-        "\"recommended_tags\": [string]"
-        "}\n"
+        "Extract structured meeting knowledge from payload.text.\n"
+        "Write exactly one item with id \"extract\" and these fields:\n"
+        "  summary: string\n"
+        "  decisions, action_items, open_questions, follow_up_topics, tools_mentioned, recommended_tags: [string]\n"
         "Rules:\n"
         "- Be factual and concise.\n"
-        "- Do not invent decisions or action items that are not supported.\n"
-        "- If something is missing, return an empty list.\n"
-        "- No markdown fences."
+        "- Do not invent decisions or action items that are not supported by the notes.\n"
+        "- If something is missing, return an empty list."
     )
 
 
-def extract_transcript_text(text: str, *, title: str, source_url: str = "") -> dict[str, Any]:
-    user_prompt = (
-        f"Transcript title: {title}\n"
-        f"Video URL: {source_url or 'Unknown'}\n\n"
-        "Transcript:\n"
-        f"{text}"
-    )
-    data = _prompt_json(_transcript_system_prompt(), user_prompt, max_tokens=1800)
-    return {
-        "summary": data.get("summary", "").strip(),
-        "timestamp_highlights": [
-            {
-                "timestamp": (item.get("timestamp") or "").strip(),
-                "label": (item.get("label") or "").strip(),
-            }
-            for item in data.get("timestamp_highlights", [])
-            if (item.get("timestamp") or "").strip() and (item.get("label") or "").strip()
-        ][:8],
-        "key_points": _limit(data.get("key_points", []), 8),
-        "reusable_claims": _limit(data.get("reusable_claims", []), 8),
-        "questions_raised": _limit(data.get("questions_raised", []), 6),
-        "action_ideas": _limit(data.get("action_ideas", []), 6),
-        "tools_mentioned": _limit(data.get("tools_mentioned", []), 10),
-        "recommended_tags": _limit(data.get("recommended_tags", []), 10),
-    }
+def _string_list(item: dict, key: str) -> list[str]:
+    value = item.get(key, [])
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise handoff.HandoffError("item_invalid", f"{key} must be a list of strings", field=key)
+    return value
 
 
-def extract_meeting_text(text: str, *, title: str, date_value: str = "", attendees: str = "") -> dict[str, Any]:
-    user_prompt = (
-        f"Meeting title: {title}\n"
-        f"Meeting date: {date_value or 'Unknown'}\n"
-        f"Attendees: {attendees or 'Unknown'}\n\n"
-        "Meeting notes/transcript:\n"
-        f"{text}"
-    )
-    data = _prompt_json(_meeting_system_prompt(), user_prompt, max_tokens=1400)
-    return {
-        "summary": data.get("summary", "").strip(),
-        "decisions": _limit(data.get("decisions", []), 8),
-        "action_items": _limit(data.get("action_items", []), 8),
-        "open_questions": _limit(data.get("open_questions", []), 8),
-        "follow_up_topics": _limit(data.get("follow_up_topics", []), 8),
-        "tools_mentioned": _limit(data.get("tools_mentioned", []), 10),
-        "recommended_tags": _limit(data.get("recommended_tags", []), 10),
-    }
+def normalize_transcript_item(item: dict, transcript_text: str) -> dict[str, Any]:
+    """Validate the assistant's extract and apply the same limits as before."""
+    if not isinstance(item.get("summary"), str):
+        raise handoff.HandoffError("item_invalid", "summary must be a string", field="summary")
+    highlights = item.get("timestamp_highlights", [])
+    if not isinstance(highlights, list):
+        raise handoff.HandoffError("item_invalid", "timestamp_highlights must be a list", field="timestamp_highlights")
+    cleaned_highlights = []
+    for entry in highlights:
+        if not isinstance(entry, dict) or not isinstance(entry.get("timestamp"), str) or not isinstance(entry.get("label"), str):
+            raise handoff.HandoffError("item_invalid", "each timestamp highlight needs a timestamp and a label", field="timestamp_highlights")
+        stamp, label = entry["timestamp"].strip(), entry["label"].strip()
+        if not stamp or not label:
+            continue
+        if stamp not in transcript_text:
+            raise handoff.HandoffError(
+                "timestamp_not_found", f"timestamp {stamp!r} does not appear in the transcript", timestamp=stamp
+            )
+        cleaned_highlights.append({"timestamp": stamp, "label": label})
+    result: dict[str, Any] = {"summary": item["summary"].strip(), "timestamp_highlights": cleaned_highlights[:8]}
+    for key, limit in TRANSCRIPT_LISTS.items():
+        result[key] = _limit(_string_list(item, key), limit)
+    return result
+
+
+def normalize_meeting_item(item: dict) -> dict[str, Any]:
+    if not isinstance(item.get("summary"), str):
+        raise handoff.HandoffError("item_invalid", "summary must be a string", field="summary")
+    result: dict[str, Any] = {"summary": item["summary"].strip()}
+    for key, limit in MEETING_LISTS.items():
+        result[key] = _limit(_string_list(item, key), limit)
+    return result
 
 
 def _save_markdown(path: Path, body: str) -> Path:
@@ -354,50 +339,114 @@ def _update_meeting_row(meeting_id: int, extracted: dict[str, Any], extract_path
         conn.commit()
 
 
-def build_transcript_extract_artifact(
-    transcript_path: Path,
-    *,
-    title: str,
-    source_url: str,
-) -> dict[str, Any]:
+def default_transcript_dir(transcript_path: Path) -> Path:
+    return TRANSCRIPT_EXTRACTS_DIR / "requests" / transcript_path.stem
+
+
+def default_meeting_dir(title: str) -> Path:
+    return MEETING_EXTRACTS_DIR / "requests" / _slugify(title, "meeting")
+
+
+def prepare_transcript_extract(transcript_path: Path, *, title: str, source_url: str,
+                               directory: Path | None = None) -> handoff.Request:
     transcript_path = transcript_path.resolve()
     text = _read_text(transcript_path)
-    extracted = extract_transcript_text(text, title=title, source_url=source_url)
-    output_path = save_transcript_extract(
-        transcript_path,
-        title=title,
-        source_url=source_url,
-        extracted=extracted,
+    return handoff.prepare(
+        stage=STAGE_TRANSCRIPT,
+        directory=directory or default_transcript_dir(transcript_path),
+        inputs={"transcript": transcript_path},
+        payload={"title": title, "source_url": source_url, "transcript_path": str(transcript_path), "text": text},
+        expects_ids=["extract"],
+        instructions=transcript_instructions(),
     )
-    summary = extracted.get("summary", "") or f"Structured transcript extract for {title}."
-    index_result = index_markdown_artifact(
-        output_path,
-        title=f"{title} — Structured Transcript Extract",
-        category="transcript-extract",
-        tags=["transcript-extract", "youtube"] + extracted.get("recommended_tags", []),
-        source_url=source_url or None,
-        summary=summary,
+
+
+def import_transcript_extract(directory: Path) -> dict[str, Any]:
+    request = handoff.load_request(directory / f"{STAGE_TRANSCRIPT}.request.json")
+    payload = request.data["payload"]
+    transcript_path = Path(payload["transcript_path"])
+    text = _read_text(transcript_path)
+    title, source_url = payload["title"], payload["source_url"]
+
+    def apply(items: list[dict]) -> dict[str, Any]:
+        extracted = normalize_transcript_item(items[0], text)
+        output_path = save_transcript_extract(transcript_path, title=title, source_url=source_url, extracted=extracted)
+        summary = extracted.get("summary", "") or f"Structured transcript extract for {title}."
+        index_result = index_markdown_artifact(
+            output_path,
+            title=f"{title} — Structured Transcript Extract",
+            category="transcript-extract",
+            tags=["transcript-extract", "youtube"] + extracted.get("recommended_tags", []),
+            source_url=source_url or None,
+            summary=summary,
+        )
+        return {
+            "status": "created", "type": STAGE_TRANSCRIPT, "title": title, "source": str(transcript_path),
+            "path": str(output_path), "knowledge_base_id": index_result["knowledge_base_id"],
+            "file_id": index_result["file_id"], **extracted,
+        }
+
+    result = handoff.import_response(request.path, apply=apply,
+                                     item_validator=lambda it: normalize_transcript_item(it, text))
+    if result.status == "already_imported":
+        return {"status": "already_imported", "type": STAGE_TRANSCRIPT, "request_id": request.request_id}
+    return result.result
+
+
+def prepare_meeting_extract(*, source_path: Path | None, text: str, title: str, date_value: str,
+                            attendees: str, meeting_id: int | None, directory: Path | None = None) -> handoff.Request:
+    inputs = {"notes": source_path.resolve()} if source_path else {}
+    return handoff.prepare(
+        stage=STAGE_MEETING,
+        directory=directory or default_meeting_dir(title),
+        inputs=inputs,
+        payload={"title": title, "date": date_value, "attendees": attendees, "meeting_id": meeting_id,
+                 "source_path": str(source_path.resolve()) if source_path else None, "text": text},
+        expects_ids=["extract"],
+        instructions=meeting_instructions(),
     )
-    return {
-        "status": "created",
-        "type": "transcript-extract",
-        "title": title,
-        "source": str(transcript_path),
-        "path": str(output_path),
-        "knowledge_base_id": index_result["knowledge_base_id"],
-        "file_id": index_result["file_id"],
-        "summary": extracted.get("summary", ""),
-        "timestamp_highlights": extracted.get("timestamp_highlights", []),
-        "key_points": extracted.get("key_points", []),
-        "reusable_claims": extracted.get("reusable_claims", []),
-        "questions_raised": extracted.get("questions_raised", []),
-        "action_ideas": extracted.get("action_ideas", []),
-        "tools_mentioned": extracted.get("tools_mentioned", []),
-        "recommended_tags": extracted.get("recommended_tags", []),
-    }
+
+
+def import_meeting_extract(directory: Path) -> dict[str, Any]:
+    request = handoff.load_request(directory / f"{STAGE_MEETING}.request.json")
+    payload = request.data["payload"]
+    source_path = Path(payload["source_path"]) if payload.get("source_path") else None
+    title, date_value, attendees = payload["title"], payload.get("date", ""), payload.get("attendees", "")
+    meeting_id = payload.get("meeting_id")
+
+    def apply(items: list[dict]) -> dict[str, Any]:
+        extracted = normalize_meeting_item(items[0])
+        output_path = save_meeting_extract(source_path=source_path, title=title, date_value=date_value,
+                                           attendees=attendees, extracted=extracted)
+        summary = extracted.get("summary", "") or f"Structured meeting extract for {title}."
+        index_result = index_markdown_artifact(
+            output_path, title=f"{title} — Meeting Extract", category="meeting-extract",
+            tags=["meeting-extract", "meeting"] + extracted.get("recommended_tags", []), summary=summary,
+        )
+        if meeting_id is not None:
+            _update_meeting_row(meeting_id, extracted, output_path)
+        return {
+            "status": "created", "type": STAGE_MEETING, "title": title, "path": str(output_path),
+            "source": str(source_path) if source_path else None, "meeting_id": meeting_id,
+            "knowledge_base_id": index_result["knowledge_base_id"], "file_id": index_result["file_id"], **extracted,
+        }
+
+    result = handoff.import_response(request.path, apply=apply, item_validator=normalize_meeting_item)
+    if result.status == "already_imported":
+        return {"status": "already_imported", "type": STAGE_MEETING, "request_id": request.request_id}
+    return result.result
 
 
 def cmd_transcript(args: argparse.Namespace) -> int:
+    if args.action == "import":
+        if not args.dir:
+            print(json.dumps({"error": "transcript import needs --dir (the request directory)"}), file=sys.stderr)
+            return 1
+        print(json.dumps(import_transcript_extract(Path(args.dir).expanduser().resolve()), indent=2))
+        return 0
+    if not args.file:
+        print(json.dumps({"error": "transcript prepare needs --file"}), file=sys.stderr)
+        return 1
     transcript_path = Path(args.file)
     if not transcript_path.is_absolute():
         transcript_path = PKA_ROOT / transcript_path
@@ -407,16 +456,22 @@ def cmd_transcript(args: argparse.Namespace) -> int:
     text = _read_text(transcript_path)
     title = args.title or _extract_first_heading(text) or transcript_path.stem
     source_url = args.url or _extract_video_url(text)
-    result = build_transcript_extract_artifact(
-        transcript_path,
-        title=title,
-        source_url=source_url,
+    request = prepare_transcript_extract(
+        transcript_path, title=title, source_url=source_url,
+        directory=Path(args.dir).expanduser().resolve() if args.dir else None,
     )
-    print(json.dumps(result, indent=2))
+    print(json.dumps({"status": "prepared", "stage": STAGE_TRANSCRIPT, "title": title, "request": str(request.path),
+                      "response": str(request.response_path), "dir": str(request.path.parent)}, indent=2))
     return 0
 
 
 def cmd_meeting(args: argparse.Namespace) -> int:
+    if args.action == "import":
+        if not args.dir:
+            print(json.dumps({"error": "meeting import needs --dir (the request directory)"}), file=sys.stderr)
+            return 1
+        print(json.dumps(import_meeting_extract(Path(args.dir).expanduser().resolve()), indent=2))
+        return 0
     source_path: Path | None = None
     text = ""
     if args.file:
@@ -432,59 +487,31 @@ def cmd_meeting(args: argparse.Namespace) -> int:
     else:
         print(json.dumps({"error": "Provide --file or --text for meeting extraction."}), file=sys.stderr)
         return 1
-
     title = args.title or (source_path.stem if source_path else "Untitled Meeting")
-    date_value = args.date or ""
-    attendees = args.attendees or ""
-    extracted = extract_meeting_text(text, title=title, date_value=date_value, attendees=attendees)
-    output_path = save_meeting_extract(
-        source_path=source_path,
-        title=title,
-        date_value=date_value,
-        attendees=attendees,
-        extracted=extracted,
+    request = prepare_meeting_extract(
+        source_path=source_path, text=text, title=title, date_value=args.date or "",
+        attendees=args.attendees or "", meeting_id=args.meeting_id,
+        directory=Path(args.dir).expanduser().resolve() if args.dir else None,
     )
-    summary = extracted.get("summary", "") or f"Structured meeting extract for {title}."
-    index_result = index_markdown_artifact(
-        output_path,
-        title=f"{title} — Meeting Extract",
-        category="meeting-extract",
-        tags=["meeting-extract", "meeting"] + extracted.get("recommended_tags", []),
-        summary=summary,
-    )
-    if args.meeting_id is not None:
-        _update_meeting_row(args.meeting_id, extracted, output_path)
-    result = {
-        "status": "created",
-        "type": "meeting-extract",
-        "title": title,
-        "path": str(output_path),
-        "source": str(source_path) if source_path else None,
-        "meeting_id": args.meeting_id,
-        "knowledge_base_id": index_result["knowledge_base_id"],
-        "file_id": index_result["file_id"],
-        "summary": extracted.get("summary", ""),
-        "decisions": extracted.get("decisions", []),
-        "action_items": extracted.get("action_items", []),
-        "open_questions": extracted.get("open_questions", []),
-        "follow_up_topics": extracted.get("follow_up_topics", []),
-        "tools_mentioned": extracted.get("tools_mentioned", []),
-        "recommended_tags": extracted.get("recommended_tags", []),
-    }
-    print(json.dumps(result, indent=2))
+    print(json.dumps({"status": "prepared", "stage": STAGE_MEETING, "title": title, "request": str(request.path),
+                      "response": str(request.response_path), "dir": str(request.path.parent)}, indent=2))
     return 0
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Create structured extracts from transcripts and meetings")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_transcript = sub.add_parser("transcript", help="Extract structured notes from a transcript markdown file")
-    p_transcript.add_argument("--file", required=True, help="Transcript markdown file")
+    p_transcript = sub.add_parser("transcript", help="Structured notes from a transcript markdown file")
+    p_transcript.add_argument("action", choices=["prepare", "import"])
+    p_transcript.add_argument("--file", help="Transcript markdown file (prepare)")
     p_transcript.add_argument("--title", help="Override title")
     p_transcript.add_argument("--url", help="Override source URL")
+    p_transcript.add_argument("--dir", help="Request directory (default: owners-inbox/transcript-extracts/requests/<stem>)")
 
-    p_meeting = sub.add_parser("meeting", help="Extract structured notes from meeting notes or transcript")
+    p_meeting = sub.add_parser("meeting", help="Structured notes from meeting notes or a transcript")
+    p_meeting.add_argument("action", choices=["prepare", "import"])
+    p_meeting.add_argument("--dir", help="Request directory (default: owners-inbox/meeting-extracts/requests/<slug>)")
     p_meeting.add_argument("--file", help="Meeting notes/transcript file")
     p_meeting.add_argument("--text", help="Inline meeting notes/transcript")
     p_meeting.add_argument("--title", help="Meeting title")
@@ -492,17 +519,14 @@ def main() -> int:
     p_meeting.add_argument("--attendees", help="Comma-separated attendees")
     p_meeting.add_argument("--meeting-id", type=int, help="Existing meetings.id to update")
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     try:
         if args.command == "transcript":
             return cmd_transcript(args)
         if args.command == "meeting":
             return cmd_meeting(args)
-    except (llm.LLMError, lmstudio.LMStudioError) as exc:
-        print(json.dumps({"error": str(exc)}), file=sys.stderr)
-        return 1
-    except json.JSONDecodeError as exc:
-        print(json.dumps({"error": f"Could not parse structured extraction JSON: {exc}"}), file=sys.stderr)
+    except handoff.HandoffError as exc:
+        print(json.dumps(exc.to_dict(), indent=2), file=sys.stderr)
         return 1
     return 0
 

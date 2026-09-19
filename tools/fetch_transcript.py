@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Alias wrapper for fetch-transcript.py to support pythonic underscore naming."""
-import sys
+"""Alias wrapper for fetch-transcript.py to support pythonic underscore naming.
+
+Runs the hyphenated script with the same interpreter that ran this one, so
+bin/pka (or any interpreter you choose) decides the environment.
+"""
 import subprocess
+import sys
 from pathlib import Path
 
 PKA_ROOT = Path(__file__).resolve().parent.parent
 TARGET = PKA_ROOT / "tools" / "fetch-transcript.py"
 
 if __name__ == "__main__":
-    venv_py = PKA_ROOT / "discord-bridge" / "venv" / "bin" / "python3"
-    python_exe = str(venv_py) if venv_py.exists() else sys.executable
-    res = subprocess.run([python_exe, str(TARGET)] + sys.argv[1:], cwd=str(PKA_ROOT))
+    res = subprocess.run([sys.executable, str(TARGET)] + sys.argv[1:], cwd=str(PKA_ROOT))
     sys.exit(res.returncode)

@@ -9,12 +9,21 @@ When the owner sends a **bare YouTube URL** with no comment:
 1. Run:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/fetch-transcript.py <url>
+bin/pka fetch-transcript <url>
 ```
 
-This now saves the fetched transcript to `owners-inbox/transcripts/YYYY-MM-DD-video-slug.md`
-and indexes it into both `knowledge_base` and `files`.
-It also creates a structured extract in `owners-inbox/transcript-extracts/` with summary, timestamp highlights, reusable claims, action ideas, and tools mentioned.
+This saves the fetched transcript to `owners-inbox/transcripts/YYYY-MM-DD-video-slug.md`
+and indexes it into both `knowledge_base` and `files`. Obtaining the transcript and analyzing it are separate steps. The structured extract is one handoff (`docs/handoff-contract.md`):
+
+```bash
+bin/pka extract_structured transcript prepare --file owners-inbox/transcripts/<file>.md
+#   -> read the request; write transcript-extract.response.json beside it: one item, id "extract",
+#      with summary, timestamp highlights (only timestamps that appear in the transcript), key points,
+#      reusable claims, questions raised, action ideas, tools mentioned, recommended tags
+bin/pka extract_structured transcript import --dir owners-inbox/transcript-extracts/requests/<file>
+#   -> owners-inbox/transcript-extracts/<date>-<slug>.md written and indexed; a cited timestamp
+#      that is not in the transcript is refused
+```
 
 2. Delegate to **Maven**
    - use the structured extract as the default briefing artifact
@@ -35,7 +44,7 @@ When the owner explicitly asks for a **YouTube content package** such as a descr
 
 1. Fetch the transcript unless the owner already pasted one
    - fetched transcripts are saved and indexed automatically
-   - fetched transcripts also produce a structured extract automatically, and that extract should be the primary handoff to Maven
+   - prepare and import the structured extract as above; that extract is the primary briefing artifact
 2. If the owner pasted a transcript manually, create a structured extract first when the task is substantial enough to benefit from durable reuse
    - if there is no saved transcript file to extract from, distill the pasted transcript into a short structured brief before delegating
 3. Delegate to **Maven**
@@ -66,7 +75,7 @@ When the owner sends a **YouTube URL with a comment or angle**, or explicitly as
    - Key takeaways
    - Source
 4. Reed saves the post to `owners-inbox/blog/YYYY-MM-DD-slug.md`
-5. Reed indexes it with `discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown --file <path> --category blog --tags ... --summary ...`
+5. Reed indexes it with `bin/pka pka_index.py index-markdown --file <path> --category blog --tags ... --summary ...`
 6. By default, send the post through Vera before final handoff
    - only skip Vera if the owner clearly asked for a rough draft, fast draft, or no QA
 7. Return a summary and confirm it was saved and indexed
