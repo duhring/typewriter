@@ -47,8 +47,37 @@ STATE_SEQUENCE = [
 ]
 
 
+# Entry points. A project is created at one entry and runs the states from
+# that entry's first state to its last, then `complete`. A completed project
+# can be continued into the next entry (develop -> publish -> article); the
+# sequence then extends to the new entry's last state. Projects created
+# before entry points exist have no `entries` and keep the full sequence.
+ENTRIES = ("develop", "publish", "article")
+ENTRY_FIRST_STATE = {"develop": "developing", "publish": "master-qc", "article": "blog-review"}
+ENTRY_LAST_STATE = {"develop": "deck-approved", "publish": "published", "article": "blog-approved"}
+ENTRY_NEXT_ACTION = {
+    "develop": "Run the intake interview and assemble the first brief.",
+    "publish": "Attach the edited final master and its QC report, then approve the master.",
+    "article": "Attach the source (transcript or interview) and start the reflective interview.",
+}
+ENTRY_DELIVERABLE = {
+    "develop": "Deck approved and CueCam bundle delivered. Record with CueCam; when an edited master exists, "
+               "continue this project into publish.",
+    "publish": "Video released and publication recorded. Continue this project into article for a written piece.",
+    "article": "Final article approved and delivered.",
+}
+
+
+def entry_sequence(entries: list[str]) -> list[str]:
+    first = STATE_SEQUENCE.index(ENTRY_FIRST_STATE[entries[0]])
+    last = STATE_SEQUENCE.index(ENTRY_LAST_STATE[entries[-1]])
+    return STATE_SEQUENCE[first:last + 1] + ["complete"]
+
+
 def workflow_sequence(project: dict) -> list[str]:
     """Absent output selection means the original contract, without migration."""
+    if project.get("entries"):
+        return entry_sequence(project["entries"])
     if "requested_outputs" not in project:
         return list(STATE_SEQUENCE)
     sequence = STATE_SEQUENCE[:STATE_SEQUENCE.index("private-upload")]
@@ -85,7 +114,7 @@ def configure_outputs(*, slug: str, requested_outputs: list[str], publication_mo
 def delivery_artifacts(project: dict) -> dict:
     """Identify the actual requested materials; never synthesize approvals."""
     required = ["final_master", "transcript", "youtube_package", "thumbnail"]
-    if "article" in project["requested_outputs"]:
+    if "article" in project.get("requested_outputs", []):
         required.append("blog_draft")
     result = {}
     for kind in required:
@@ -101,7 +130,30 @@ def delivery_artifacts(project: dict) -> dict:
     return result
 
 
+def entry_completion(project: dict) -> dict:
+    """What the last entry delivers. Never synthesizes an approval."""
+    entry = project["entries"][-1]
+    if entry == "develop":
+        bundle = current_artifact(project, "cuecam_bundle")
+        _require(project, bundle is not None, "Develop delivery is missing the CueCam bundle")
+        _require(project, approval_is_current(project, "deck"), "Develop delivery requires a current deck approval")
+        _require(project, hash_path(resolve_path(bundle["path"])) == bundle["sha256"],
+                 "Develop delivery has changed on disk: cuecam_bundle")
+        return {"cuecam_bundle": dict(bundle)}
+    if entry == "publish":
+        materials = delivery_artifacts(project)
+        _require(project, "youtube" in project.get("publications", {}), "YouTube publication record is missing")
+        return materials
+    # article: the draft gate today; the final-article gate arrives with the article entry work.
+    draft = current_artifact(project, "blog_draft")
+    _require(project, draft is not None, "Article delivery is missing the blog draft")
+    _require(project, approval_is_current(project, "blog"), "Article delivery requires a current blog approval")
+    return {"blog_draft": dict(draft)}
+
+
 def validate_completion(project: dict) -> dict | None:
+    if project.get("entries"):
+        return entry_completion(project)
     if "requested_outputs" not in project:
         _require(project, "substack" in project.get("publications", {}),
                  "Substack publication record is missing")
@@ -831,19 +883,23 @@ def save_project(project: dict) -> dict:
 
 
 def create_project(*, title: str, slug: str | None, summary: str,
-                   requested_outputs: list[str] | None = None, publication_mode: str = "owner") -> dict:
+                   requested_outputs: list[str] | None = None, publication_mode: str = "owner",
+                   entry: str | None = None) -> dict:
     project_slug = slugify(slug or title)
     path = _manifest_path(project_slug)
     if path.exists():
         raise FileExistsError(f"Video project already exists: {path}")
+    if entry is not None and entry not in ENTRIES:
+        raise ValueError(f"entry must be one of {', '.join(ENTRIES)}")
     now = _now()
+    first_state = ENTRY_FIRST_STATE[entry] if entry else "developing"
     project = {
         "schema_version": 1,
         "slug": project_slug,
         "title": title.strip(),
         "summary": summary.strip(),
-        "state": "developing",
-        "next_action": "Run the intake interview and assemble the first brief.",
+        "state": first_state,
+        "next_action": ENTRY_NEXT_ACTION[entry] if entry else "Run the intake interview and assemble the first brief.",
         "created_at": now,
         "updated_at": now,
         "artifacts": {},
@@ -857,8 +913,11 @@ def create_project(*, title: str, slug: str | None, summary: str,
         "youtube": {},
         "publications": {},
         "metrics": [],
-        "history": [{"at": now, "from": None, "to": "developing", "note": "Project created."}],
+        "history": [{"at": now, "from": None, "to": first_state,
+                     "note": f"Project created at the {entry} entry." if entry else "Project created."}],
     }
+    if entry:
+        project["entries"] = [entry]
     if requested_outputs is not None:
         if set(requested_outputs) not in ({"video"}, {"video", "article"}):
             raise ValueError("requested_outputs must be video or video plus article")
@@ -955,6 +1014,10 @@ def _disk_hash(record: dict) -> str | None:
         stat = path.stat()
     except OSError:
         return None
+    if not path.is_file():
+        # A directory's mtime does not change when a file inside it is
+        # overwritten, so a bundle is always rehashed. Bundles are small.
+        return hash_path(path)
     key = str(path)
     cached = _DISK_HASH_CACHE.get(key)
     if cached and cached[0] == stat.st_mtime_ns and cached[1] == stat.st_size:
@@ -1081,7 +1144,12 @@ def advance_project(*, slug: str, target: str | None, note: str = "") -> dict:
     if target_state != expected:
         raise ValueError(f"Invalid transition {current} → {target_state}; expected {expected}")
     materials = _validate_target(project, target_state)
-    if target_state == "complete" and "requested_outputs" in project:
+    if target_state == "complete" and project.get("entries"):
+        project.setdefault("deliveries", []).append({
+            "at": _now(), "artifacts": materials, "entry": project["entries"][-1],
+            "status": "materials-delivered",
+        })
+    elif target_state == "complete" and "requested_outputs" in project:
         project.setdefault("deliveries", []).append({
             "at": _now(), "artifacts": materials,
             "requested_outputs": list(project["requested_outputs"]),
@@ -1089,7 +1157,9 @@ def advance_project(*, slug: str, target: str | None, note: str = "") -> dict:
         })
     project["state"] = target_state
     project["next_action"] = note.strip() or f"Complete the `{sequence[min(current_index + 2, len(sequence) - 1)]}` gate."
-    if target_state == "complete" and "requested_outputs" in project:
+    if target_state == "complete" and project.get("entries"):
+        project["next_action"] = ENTRY_DELIVERABLE[project["entries"][-1]]
+    elif target_state == "complete" and "requested_outputs" in project:
         project["next_action"] = (
             "Materials delivered. Publication is recorded separately when confirmed by the owner."
             if project["publication_mode"] == "owner" else "Requested materials delivered and publication confirmed."
@@ -1099,6 +1169,31 @@ def advance_project(*, slug: str, target: str | None, note: str = "") -> dict:
     )
     result = save_project(project)
     return {**result, "from": current, "to": target_state}
+
+
+def continue_project(*, slug: str, into: str, note: str = "") -> dict:
+    """Reopen a completed project into the next entry. Everything recorded so
+    far (artifacts, approvals, deliveries, history) stays exactly as it was."""
+    project = load_project(slug)
+    _require(project, bool(project.get("entries")), "Only projects created at an entry point can be continued")
+    _require(project, project["state"] == "complete",
+             f"Continue requires state=complete; current state={project['state']}")
+    _require(project, into in ENTRIES, f"into must be one of {', '.join(ENTRIES)}")
+    last = project["entries"][-1]
+    _require(project, ENTRIES.index(into) == ENTRIES.index(last) + 1,
+             f"A {last} project continues into {ENTRIES[ENTRIES.index(last) + 1] if last != ENTRIES[-1] else 'nothing'}, not {into}")
+    previous = project["state"]
+    resume = STATE_SEQUENCE[STATE_SEQUENCE.index(ENTRY_LAST_STATE[last]) + 1]
+    project["entries"].append(into)
+    project["state"] = resume
+    project["next_action"] = ENTRY_NEXT_ACTION[into] if into != "publish" else (
+        "Attach the raw recording, clean it, and bring the edited master to QC.")
+    project.setdefault("history", []).append({
+        "at": _now(), "from": previous, "to": resume, "event": "continued", "into": into,
+        "note": note.strip() or f"Continued from {last} into {into}; prior deliveries and approvals unchanged.",
+    })
+    result = save_project(project)
+    return {**result, "from": previous, "to": resume, "continued_into": into}
 
 
 def import_master_qc(*, slug: str, note: str = "") -> dict:
@@ -1931,6 +2026,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--summary", default="")
     p.add_argument("--outputs", nargs="+", choices=["video", "article"], default=["video"])
     p.add_argument("--publication-mode", choices=["owner", "automated-private"], default="owner")
+    p.add_argument("--entry", choices=list(ENTRIES),
+                   help="Where the project starts: develop (topic -> CueCam bundle), publish (edited master -> "
+                        "YouTube), article (source -> written piece). Omit for the full legacy sequence.")
+
+    p = sub.add_parser("continue", help="Reopen a completed project into the next entry point")
+    p.add_argument("--slug", required=True)
+    p.add_argument("--into", required=True, choices=list(ENTRIES))
+    p.add_argument("--note", default="")
 
     p = sub.add_parser("configure-outputs", help="Explicitly select an output path for an eligible existing project")
     p.add_argument("--slug", required=True)
@@ -2062,7 +2165,10 @@ def main() -> int:
     args = build_parser().parse_args()
     if args.command == "create":
         result = create_project(title=args.title, slug=args.slug, summary=args.summary,
-                                requested_outputs=args.outputs, publication_mode=args.publication_mode)
+                                requested_outputs=args.outputs, publication_mode=args.publication_mode,
+                                entry=args.entry)
+    elif args.command == "continue":
+        result = continue_project(slug=args.slug, into=args.into, note=args.note)
     elif args.command == "configure-outputs":
         result = configure_outputs(slug=args.slug, requested_outputs=args.outputs,
                                    publication_mode=args.publication_mode)

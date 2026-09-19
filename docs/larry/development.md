@@ -126,6 +126,23 @@ Assemble `outline.md` **from the cleared claims in `claims.json`** — claims th
 - Close by paying off the opening promise, not by introducing new material.
 - Keep it an outline: beats and talking points in the owner's own words from the interview, never scripted prose.
 
+## Tracking a develop project
+
+The development stage is its own project entry. Create the project at the `develop` entry; it runs the development and deck states and completes when the deck is approved and the CueCam bundle is attached. No video material is required to complete it.
+
+```
+bin/pka video_project create --title "<working title>" --slug <slug> --entry develop
+bin/pka video_project sync-development --slug <slug>        # attaches interview, claims, challenge, outline, balance check, brief
+bin/pka video_project approve --slug <slug> --gate brief --by "<owner>"
+bin/pka video_project advance --slug <slug>                  # brief-approved, then deck-review
+bin/pka video_project attach --slug <slug> --kind cuecam_bundle --path owners-inbox/presentations/<bundle>.cuecam
+bin/pka video_project approve --slug <slug> --gate deck --by "<owner>"
+bin/pka video_project advance --slug <slug>                  # deck-approved
+bin/pka video_project advance --slug <slug>                  # complete: bundle delivered
+```
+
+Completion never creates an approval; it checks that the deck approval is current and the bundle on disk still matches what was approved. When an edited master exists later, `bin/pka video_project continue --slug <slug> --into publish` reopens the same project at the recording state with every artifact, approval, and delivery kept.
+
 ## Stage 4 — Balance Check
 
 The challenge gate and the balance check are complementary, not redundant: the challenge gate works **per claim, before assembly**, and removes material; the balance check works on the **assembled outline, after** it exists, and catches problems that only appear in the arrangement — an outline that is individually fine claim by claim but collectively retreads a prior post, or drifts on brand. Run both.
