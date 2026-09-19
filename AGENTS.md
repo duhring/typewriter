@@ -6,52 +6,15 @@ This file is the working contract for any assistant operating inside the PKA rep
 
 You do the thinking; PKA prepares material, validates what comes back, records every run, and never approves anything. Each editorial step is a handoff (`docs/handoff-contract.md`): a tool writes `<stage>.request.json`, you read it and the inputs it names, write `<stage>.response.json` beside it, and the tool imports it. Import refuses stale, incomplete, or unverifiable answers and applies a valid one exactly once. Owner approval is a command the owner gives, never something an import creates. No model service or key is involved; your own subscription is the only account.
 
-### Develop: topic to CueCam bundle
+The three entry points, each with its step-by-step command sequence in `docs/assistant-workflows.md` and a worked example under `tests/acceptance/`:
 
-Procedure and file formats: `docs/larry/development.md`. Files live in `owners-inbox/development/<slug>/`. Worked example with every response file: `tests/acceptance/develop.sh`.
+| Entry | From | To | Procedure |
+|---|---|---|---|
+| `develop` | a topic | approved deck and CueCam bundle | `docs/larry/development.md` |
+| `publish` | an edited master | released video with its public URL recorded | `docs/larry/video-production.md` |
+| `article` | a transcript or an intake interview | reconciled final article, approval bound to the file | `docs/larry/video-production.md` section 7 |
 
-```
-(interview the owner; save interview.md)
-bin/pka challenge --slug S extract prepare --source owners-inbox/development/S/interview.md
-(write challenge.extract-claims.response.json)      bin/pka challenge --slug S extract import
-(write challenge.verdicts.response.json)            bin/pka challenge --slug S verdicts import
-(write challenge.context-review.response.json)      bin/pka challenge --slug S context-review import
-(owner rules; owner_override in claims.json)        bin/pka challenge --slug S refresh
-(write outline.md from cleared claims)
-bin/pka balance_check --slug S prepare --outline owners-inbox/development/S/outline.md
-(write balance-check.analysis.response.json)        bin/pka balance_check --slug S import
-(write brief.md and the card spec)                  bin/pka cuecam compose --spec-file <spec> --title "<title>"
-bin/pka video_project create --title "<title>" --slug S --entry develop
-bin/pka video_project sync-development --slug S; advance; approve --gate brief; advance; advance;
-  attach --kind cuecam_bundle --path <bundle>; approve --gate deck; advance; advance   # -> complete
-```
-
-`bin/pka challenge --slug S status` and `bin/pka video_project status --slug S` say what to do next. The project completes on a current deck approval and the delivered bundle; no video material is required.
-
-### Article: video or intake to a written piece
-
-Procedure: `docs/larry/video-production.md` section 7 and `docs/larry/youtube-writing.md`. Worked examples: `tests/acceptance/article.sh intake|transcript`.
-
-```
-(transcript source)  bin/pka fetch-transcript <url or file>
-                     bin/pka extract_structured transcript prepare --file owners-inbox/transcripts/<f>.md
-                     (write transcript-extract.response.json; every cited timestamp must be in the transcript)
-                     bin/pka extract_structured transcript import --dir owners-inbox/transcript-extracts/requests/<f>
-(intake source)      interview the owner; save owners-inbox/development/S/interview.md
-bin/pka video_project create --title "<title>" --slug S --entry article
-bin/pka video_project attach --slug S --kind transcript|interview --path <source>
-(reflective interview, thesis confirmed by the owner)  attach --kind editorial_interview; attach --kind blog_thesis
-bin/pka video_project substack-brief --slug S --pov ... --reader ... --mode standalone|companion --adds ... --cta ...
-(developmental draft; left unfinished for the owner)   attach --kind blog_draft; owner: approve --gate blog; advance
-(owner edits by hand; you reconcile into the final)    attach --kind blog_owner_edit; attach --kind blog_final
-owner: approve --gate blog_final; advance; advance     # -> complete
-```
-
-The final approval is bound to the exact file: editing `blog_final` after approval makes it stale until the owner approves again. The project delivers the final article; no video, YouTube, or publication record is needed.
-
-### Publish
-
-The publish entry (edited master to YouTube) is being moved onto the same handoff shape. Until its section lands here, follow `docs/larry/video-production.md`.
+`bin/pka video_project status --slug S` says where a project stands; `bin/pka challenge --slug S status` does the same for a challenge run. Every tool runs through `bin/pka`.
 
 ## Governing principle
 

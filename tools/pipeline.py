@@ -6,10 +6,11 @@ The package and its chapter review are the owner's assistant's work, handed
 over as two sequential stages (docs/handoff-contract.md), both bound to the
 final-master transcript and living in owners-inbox/video-projects/<slug>/:
 
-  bin/pka pipeline package prepare --project SLUG [--video FINAL.mp4]
-      -> transcribes the approved master (local Whisper), attaches the
-         transcript, writes pipeline.package.request.json with the timed
-         segments and the package format
+  bin/pka pipeline package prepare --project SLUG [--video FINAL.mp4] [--transcript T.md]
+      -> transcribes the approved master (local Whisper), or takes a timed
+         transcript you supply; attaches the transcript; writes
+         pipeline.package.request.json with the timed segments and the
+         package format
   (the assistant writes pipeline.package.response.json: one item, id "package",
    with the full package markdown)
   bin/pka pipeline package import --project SLUG
@@ -313,11 +314,21 @@ def package_prepare(args: argparse.Namespace) -> int:
 
     project = video_project.load_project(args.project)
     video = _approved_master(project, args.video)
+    supplied = getattr(args, "transcript", None)
     if args.dry_run:
         print(json.dumps({"status": "dry-run", "project": project["slug"], "video": str(video),
-                          "would": ["transcribe", "prepare package request"]}, indent=2))
+                          "would": ["use supplied transcript" if supplied else "transcribe",
+                                    "prepare package request"]}, indent=2))
         return 0
-    transcript_path, _ = _transcribe(video)
+    if supplied:
+        # A timed transcript the owner already has (or made elsewhere) stands in
+        # for local Whisper. It must carry the final master's timestamps.
+        transcript_path = Path(supplied).expanduser().resolve()
+        if not transcript_path.exists():
+            raise FileNotFoundError(transcript_path)
+        read_transcript(transcript_path)  # validates the timed-segment format
+    else:
+        transcript_path, _ = _transcribe(video)
     video_project.attach_artifact(
         slug=project["slug"], kind="transcript", raw_path=str(transcript_path),
         note="Definitive transcript derived from the approved final master.",
@@ -468,6 +479,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("action", choices=["prepare", "import"])
     p.add_argument("--project", required=True)
     p.add_argument("--video", help="prepare: the final master file (defaults to the attached one)")
+    p.add_argument("--transcript", help="prepare: a timed transcript of the master to use instead of local Whisper")
     p.add_argument("--dry-run", action="store_true")
     p = sub.add_parser("chapter-review", help="Chapter-review handoff: import the response")
     p.add_argument("action", choices=["import"])
