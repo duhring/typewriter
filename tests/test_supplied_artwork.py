@@ -70,6 +70,8 @@ class TestSuppliedThumbnail(unittest.TestCase):
         self.assertEqual(project["selections"]["thumbnail"]["sha256"], vp.hash_path(art))
         project["state"] = "package-review"
         vp.save_project(project)
+        from review_fixtures import attach_review
+        attach_review(vp, "art")
         vp.approve_gate(slug="art", gate="package", approved_by="owner")
         self.assertTrue(vp.approval_is_current(vp.load_project("art"), "package"))
         art.write_bytes(b"replaced artwork")

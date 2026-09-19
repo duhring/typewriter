@@ -10,9 +10,8 @@
 # The "assistant" is this script: it answers the two request files. The one
 # step this run cannot perform is the YouTube upload itself, which needs the
 # owner's Google authorization; in automated mode the private upload is
-# recorded as the upload tool would record it, and the rest of the path
-# (QA checklist, release approval, the owner's release, the public URL) runs
-# for real. The master is a two-second clip generated with ffmpeg, and its
+# recorded as a fixture. QA, approvals and release are simulated tracker
+# commands using synthetic IDs/URLs; they do not verify YouTube or human actions. The master is a two-second clip generated with ffmpeg, and its
 # transcript is supplied, so local Whisper is not needed either.
 
 set -euo pipefail
@@ -176,7 +175,7 @@ EXPECTED=$([ "$MODE" = owner ] && echo "['master', 'package']" || echo "['master
 [ "$(json "$MANIFEST" "sorted(d['approvals'])")" = "$EXPECTED" ] || die "unexpected approvals: $(json "$MANIFEST" "sorted(d['approvals'])")"
 [ "$(json "$MANIFEST" "d['publications']['youtube']['url']")" != "" ] || die "no public URL"
 [ "$(json "$MANIFEST" "d['youtube'].get('privacy')")" = "public" ] || die "release not recorded as public"
-ok "complete: materials delivered, public URL recorded, only the owner's approvals present"
+ok "complete: materials delivered, public URL recorded, only fixture owner approval labels present"
 
 step "Result ($MODE)"
 echo "  master -> QC -> master approval -> package (2 handoffs) -> artwork -> package approval -> release -> URL -> complete"

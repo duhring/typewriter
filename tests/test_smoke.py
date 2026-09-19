@@ -499,6 +499,8 @@ class TestVideoProjectWorkflow(unittest.TestCase):
         project = vp.load_project("pilot-video")
         project["state"] = "package-review"
         vp.save_project(project)
+        from review_fixtures import attach_review
+        attach_review(vp, "pilot-video")
         vp.approve_gate(slug="pilot-video", gate="package", approved_by="John")
         self.assertTrue(vp.approval_is_current(vp.load_project("pilot-video"), "package"))
         vp.advance_project(slug="pilot-video", target="package-approved")
@@ -532,6 +534,8 @@ class TestVideoProjectWorkflow(unittest.TestCase):
         project = vp.load_project("pilot-video")
         project["state"] = "package-review"
         vp.save_project(project)
+        from review_fixtures import attach_review
+        attach_review(vp, "pilot-video")
         vp.approve_gate(slug="pilot-video", gate="package", approved_by="John")
         vp.select_title(slug="pilot-video", title="Changed after approval")
         self.assertFalse(vp.approval_is_current(vp.load_project("pilot-video"), "package"))
@@ -629,6 +633,8 @@ class TestVideoProjectWorkflow(unittest.TestCase):
         project = vp.load_project("pilot-video")
         project["state"] = "package-review"
         vp.save_project(project)
+        from review_fixtures import attach_review
+        attach_review(vp, "pilot-video")
         vp.approve_gate(slug="pilot-video", gate="package", approved_by="John")
         vp.advance_project(slug="pilot-video", target="package-approved")
         result = pipeline.upload_project(SimpleNamespace(

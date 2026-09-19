@@ -30,6 +30,8 @@ class RequestedOutputs(unittest.TestCase):
             vp.attach_artifact(slug='test', kind=kind, raw_path=str(path))
         vp.select_title(slug='test', title='Example')
         vp.select_thumbnail(slug='test', raw_path=str(self.root / 'thumbnail.txt'))
+        from review_fixtures import attach_review
+        attach_review(vp, 'test')
         project = vp.load_project('test')
         # Fixture represents actual prior reviews; completion must not add any.
         for gate in ['master', 'package']:

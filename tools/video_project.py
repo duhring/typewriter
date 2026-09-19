@@ -237,6 +237,7 @@ ARTIFACT_FLOW = {
     # The brief is packaging intent from the development stage; a project that
     # entered at publish has none, so it is optional rather than expected.
     "youtube_package": {"stage": "packaging", "expected_inputs": ["transcript"], "optional_inputs": ["brief"]},
+    "chapter_review": {"stage": "packaging", "expected_inputs": ["youtube_package", "transcript", "final_master"]},
     # Second editorial loop. John's own staging, from the intake interview:
     # reflective interview after the recording -> confirmed thesis -> first draft
     # for manual editing -> owner's substantive edit -> reconciled final.
@@ -261,8 +262,8 @@ GATE_ARTIFACTS = {
     "brief": ["brief"],
     "deck": ["cuecam_bundle"],
     "master": ["final_master", "qc_report"],
-    "package": ["final_master", "youtube_package", "thumbnail"],
-    "release": ["final_master", "youtube_package", "thumbnail"],
+    "package": ["final_master", "youtube_package", "thumbnail", "transcript", "chapter_review"],
+    "release": ["final_master", "youtube_package", "thumbnail", "transcript", "chapter_review"],
     "blog": ["blog_draft"],
     "blog_final": ["blog_final"],
 }
@@ -1082,7 +1083,28 @@ def _gate_files_unchanged(project: dict, gate: str) -> bool:
     return True
 
 
+def chapter_review_is_current(project: dict) -> bool:
+    """The validated review must describe the current package and its sources."""
+    artifact = current_artifact(project, "chapter_review")
+    if not artifact or _disk_hash(artifact) != artifact.get("sha256"):
+        return False
+    try:
+        review = json.loads(resolve_path(artifact["path"]).read_text())
+        for role, kind in (("package", "youtube_package"), ("transcript", "transcript"),
+                           ("master", "final_master")):
+            current = current_artifact(project, kind)
+            reviewed = review["inputs"][role]
+            if not current or reviewed["sha256"] != current["sha256"] or _disk_hash(current) != reviewed["sha256"]:
+                return False
+        chapters = review["chapters"]
+        return bool(chapters) and all(c.get("supported") is True for c in chapters)
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return False
+
+
 def approval_is_current(project: dict, gate: str) -> bool:
+    if gate in {"package", "release"} and not chapter_review_is_current(project):
+        return False
     approval = project.get("approvals", {}).get(gate)
     if not approval:
         return False
@@ -1121,6 +1143,8 @@ def approve_gate(*, slug: str, gate: str, approved_by: str, note: str = "") -> d
                 "Cannot approve package: thumbnail reference rights are unrecorded for "
                 + ", ".join(unverified_refs)
             )
+    if gate in {"package", "release"} and not chapter_review_is_current(project):
+        raise ValueError("Cannot approve: chapter review is missing or stale; review the current package and transcript")
     hashes = _approval_hashes(project, gate)
     project.setdefault("approvals", {})[gate] = {
         "approved_by": approved_by.strip(),
@@ -1163,6 +1187,8 @@ def _validate_target(project: dict, target: str) -> dict | None:
         "blog-final-approved": (approval_is_current(project, "blog_final"),
                                 "final-article approval is missing or stale"),
     }
+    if target == "package-review":
+        _require(project, chapter_review_is_current(project), "chapter review is missing or stale")
     if target in requirements:
         _require(project, *requirements[target])
 

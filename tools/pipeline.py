@@ -221,6 +221,8 @@ def project_dir(slug: str) -> Path:
 
 
 def prepare_package(*, slug: str, transcript_path: Path) -> handoff.Request:
+    import video_project
+
     transcript_text = read_transcript(transcript_path)
     segments = timed_segments(transcript_text)
     if len(transcript_text) > MAX_TRANSCRIPT_CHARS:
@@ -232,7 +234,8 @@ def prepare_package(*, slug: str, transcript_path: Path) -> handoff.Request:
     return handoff.prepare(
         stage=STAGE_PACKAGE,
         directory=project_dir(slug),
-        inputs={"transcript": transcript_path},
+        inputs={"transcript": transcript_path,
+                "master": _approved_master(video_project.load_project(slug), None)},
         payload={"slug": slug, "segments": segments, "transcript_chars": len(transcript_text)},
         expects_ids=["package"],
         instructions=PACKAGE_INSTRUCTIONS,
@@ -247,8 +250,9 @@ def prepare_chapter_review(*, slug: str, package_path: Path, transcript_path: Pa
     return handoff.prepare(
         stage=STAGE_REVIEW,
         directory=project_dir(slug),
-        inputs={"transcript": transcript_path, "package": package_path},
-        payload={"slug": slug, "chapters": entries},
+        inputs={"transcript": transcript_path, "package": package_path,
+                "master": Path(after.data["inputs"]["master"]["path"])},
+        payload={"slug": slug, "chapters": entries, "review_schema_version": 2},
         expects_ids=[e["id"] for e in entries],
         instructions=REVIEW_INSTRUCTIONS,
         slug=slug,
@@ -399,9 +403,11 @@ def chapter_review_import(args: argparse.Namespace) -> int:
             )
         review_path = project_dir(project["slug"]) / "chapter-review.json"
         review_path.write_text(json.dumps({
-            "package": request.data["inputs"]["package"], "request_id": request.request_id,
-            "chapters": [{**chapters[it["id"]], "reason": it["reason"]} for it in items],
+            "inputs": request.data["inputs"], "request_id": request.request_id,
+            "chapters": [{**chapters[it["id"]], "reason": it["reason"], "supported": True} for it in items],
         }, indent=2) + "\n", encoding="utf-8")
+        video_project.attach_artifact(slug=project["slug"], kind="chapter_review",
+                                      raw_path=str(review_path), note="Validated chapter review.")
         return review_path
 
     result = handoff.import_response(request.path, apply=apply, item_validator=validate_review_item)

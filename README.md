@@ -26,11 +26,24 @@ bin/pka check                # re-run the Python and toolchain check
 
 Any assistant that can read files and run commands uses the same launcher. No model service, no model keys: your assistant does the thinking, PKA validates and records the results. See `docs/handoff-contract.md`.
 
-The definition of done for a fresh install is one command. It clears every model variable, runs the unit suite, then runs all three entry points end to end (develop, article from an intake and from a transcript, publish in owner and automated modes) with canned assistant responses:
+Run the offline integration checks on a disposable clone after bootstrap. They clear known model-related variables, run the unit suite, and exercise five scripted paths (develop, two article inputs, and two publication modes) using canned assistant responses:
 
 ```bash
 tests/acceptance/all.sh
 ```
+
+These scripts create test projects and invoke approval commands with fixture owner
+labels. They simulate YouTube IDs, QA checklists, and publication URLs; they do
+not upload, release a video, verify human approval, or open CueCam. Passing proves
+local validation and tracker behavior. Real CueCam playback/recording and an
+owner-authorized YouTube upload, playback check, and release remain separate
+integration checks.
+
+Package and release approval require a current chapter review bound to the
+package, transcript, and final master. Existing projects without this review
+must prepare/import a new package and chapter review, then obtain fresh owner
+approval. Re-extracting an interview retains run history and snapshots of prior
+claims; owner decisions transfer only to an unchanged claim and supporting quote.
 
 ## What you have to do by hand
 

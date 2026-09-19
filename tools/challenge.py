@@ -229,12 +229,21 @@ def import_extract(*, directory: Path, corpus: Corpus) -> dict:
         claims = build_claims(raw, source_text)
         if not claims:
             raise ChallengeError("No claims extracted — the source may be too thin to outline from.")
+        previous = read_register(directory) if (directory / "claims.json").exists() else {}
+        reconcile_claims(claims, previous)
         attach_evidence(claims, corpus)
+        snapshots = copy.deepcopy(previous.get("extraction_history", []))
+        if previous:
+            snapshots.append({"at": datetime.now().isoformat(),
+                              "source": previous.get("source"),
+                              "handoff": previous.get("handoff", {}),
+                              "claims": copy.deepcopy(previous["claims"])})
         register = {
             "slug": slug,
             "source": display_path(source_path),
             "claims": claims,
-            "runs": [],
+            "runs": copy.deepcopy(previous.get("runs", [])),
+            "extraction_history": snapshots,
             "handoff": {"extract": request.request_id},
         }
         write_register(directory, register)
@@ -259,6 +268,33 @@ def import_extract(*, directory: Path, corpus: Corpus) -> dict:
 # --------------------------------------------------------------------------
 # Claim building (quote verification, support taxonomy)
 # --------------------------------------------------------------------------
+
+
+def reconcile_claims(claims: list[dict], previous: dict) -> None:
+    """Keep IDs and owner decisions only for the same assertion and quote.
+
+    Changed/dropped claims remain in extraction_history, never silently inherit
+    another claim's decision just because their ordinal position matches.
+    """
+    def identity(c):
+        return (c.get("claim", "").strip(), c.get("support_quote", "").strip(),
+                c.get("claimed_quote", "").strip(), c.get("support"))
+    old = {identity(c): c for c in previous.get("claims", [])}
+    historical = previous.get("claims", []) + [
+        c for snapshot in previous.get("extraction_history", []) for c in snapshot["claims"]]
+    used = {c["id"] for c in historical}
+    number = 1
+    for claim in claims:
+        prior = old.get(identity(claim))
+        if prior:
+            claim["id"] = prior["id"]
+            for field in ("owner_override", "owner_note"):
+                claim[field] = prior.get(field)
+        else:
+            while f"c{number}" in used:
+                number += 1
+            claim["id"] = f"c{number}"
+            used.add(claim["id"])
 
 
 def build_claims(raw_claims: list[dict], source_text: str) -> list[dict]:
@@ -435,6 +471,13 @@ Rules:
 """
 
 
+def evidence_inputs(source_path: Path, claims: list[dict]) -> dict[str, Path]:
+    """Bind each cited file, including files whose quotes are in the payload."""
+    paths = sorted({hit["path"] for c in claims for hit in c.get("retread", [])})
+    return {"source": source_path, **{f"evidence_{i}": (PKA_ROOT / path).resolve()
+                                     for i, path in enumerate(paths)}}
+
+
 def prepare_verdicts(*, directory: Path, register: dict, source_path: Path,
                      after: handoff.Request | None = None) -> handoff.Request:
     claims = register["claims"]
@@ -443,7 +486,7 @@ def prepare_verdicts(*, directory: Path, register: dict, source_path: Path,
     request = handoff.prepare(
         stage=STAGE_VERDICTS,
         directory=directory,
-        inputs={"source": source_path},
+        inputs=evidence_inputs(source_path, claims),
         payload={
             "register_sha256": register_sha(directory),
             "batches": [
@@ -664,7 +707,7 @@ def prepare_context_review(*, directory: Path, register: dict, source_path: Path
     return handoff.prepare(
         stage=STAGE_CONTEXT,
         directory=directory,
-        inputs={"source": source_path},
+        inputs=evidence_inputs(source_path, register["claims"]),
         payload={"register_sha256": register_sha(directory), "claims": entries},
         expects_ids=[e["id"] for e in entries],
         instructions=context_instructions(),

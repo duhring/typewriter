@@ -171,10 +171,26 @@ One ticket per row, in dependency order. Phase numbers match the order of work.
 | T16 | Provider removal: delete router and clients, clean config, bootstrap, README, retire provider doc; remove `promote_sop` and `generate_thumbnail`. Done 2026-09-18: `llm.py`, `lmstudio.py`, `xai.py`, `glm.py`, `rotate_glm_key.py`, `promote_sop.py`, and `docs/larry/llm-providers.md` deleted; provider keys and routing removed from the env example, the ollama block from machine config, the provider row from the README; the Discord bot's grok-brief command (xAI) removed; federation, operations, and Dreamer docs reworded; `tests/test_no_provider.py` scans the repo for any provider import, key, or mention | T8, T11, T15, T17 | 5 |
 | T17 | Keyword retrieval default; text-search table if missing; drop the `lmstudio` import from memory retrieval. Done 2026-09-18: no text-search table existed; an FTS5 index (porter stemming, BM25) over chunk titles and text is created on first sync and kept in step by triggers, and an existing database is rebuilt into it without re-sync; recall is read-only and needs no model; the recency, source, and intent bonuses are unchanged; the embedding column stays for compatibility but is never written | | 5 |
 | T18 | `AGENTS.md` as the primary workflow document; Claude files point at it. Done 2026-09-18: `AGENTS.md` retitled and declared the primary contract with nothing essential elsewhere; `CLAUDE.md` declares itself the Claude Code adapter and yields to `AGENTS.md` on conflict, routes the three entries to `docs/assistant-workflows.md`, and states the specialists are voices for one assistant; `llms.txt` and the README list `AGENTS.md` first; every remaining old interpreter path in 19 markdown files swept to `bin/pka`; the one-shot remnants in the CueCam doc removed; tests lock the primary/adapter wording and the path sweep | T8, T11, T15 | 5 |
-| T19 | Clean-install verification of all three entries on a machine with no keys and no model server. Done 2026-09-19: `tests/acceptance/all.sh` clears every model variable, checks for provider modules and imports, runs the unit suite (322), then the five acceptance runs; passed on a fresh clone after bootstrap, every project complete with only the owner's approvals present | T16 to T18 | 5 |
+| T19 | Clean-install verification of all three entries on a machine with no keys and no model server. Done 2026-09-19: `tests/acceptance/all.sh` clears every model variable, checks for provider modules and imports, runs the unit suite (322), then the five acceptance runs; passed on a fresh clone after bootstrap, every test project complete with fixture owner approval labels | T16 to T18 | 5 |
 
-First milestone reached 2026-09-18: T1 to T8 done and committed; the develop path runs end to end on a fresh install with no model service or keys. All five phases done (T1 to T19, 2026-09-18 to 2026-09-19). The acceptance criteria hold on a fresh clone: three entry points, no model service, no model keys, every approval the owner's, every assistant response validated on import. Remaining: upgrade the mini to this system and back-port the path and configuration changes (see Back-port).
+First milestone reached 2026-09-18: T1 to T8 done and committed; the develop path runs end to end on a fresh install with no model service or keys. All five phases done (T1 to T19, 2026-09-18 to 2026-09-19). The acceptance criteria hold on a fresh clone: three entry points, no model service, no model keys, scripted approval commands labelled as owner actions, assistant response fixtures validated on import. Remaining: upgrade the mini to this system and back-port the path and configuration changes (see Back-port).
 
 ## Back-port
 
 Path and configuration changes made here are worth back-porting to the working repo when the mini is upgraded, in line with the starter's existing practice of re-filtering from PKA rather than diverging.
+
+
+## Post-implementation review corrections
+
+The first verification established scripted local behavior, not real human
+approval or external application operation. The acceptance scripts supply
+assistant responses, owner-labelled approval commands, synthetic YouTube IDs,
+QA checklists and publication URLs. Real CueCam playback/recording and an
+explicitly authorized YouTube upload, playback/QA and release remain unverified.
+
+Review fixes preserve extraction run history and snapshots of replaced claims,
+retain stable IDs and owner decisions only for unchanged claims and quotes,
+hash cited evidence in both challenge review stages, and require a current
+chapter review at package/release approval and downstream checks. Chapter reviews
+bind the package, transcript and final master. Existing packages need a fresh
+review and owner approval. Required bootstrap failures now exit nonzero.

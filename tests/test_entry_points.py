@@ -208,6 +208,8 @@ class TestPublishAndArticleCompletion(EntryCase):
         project["qc"] = {"status": "pass"}
         vp.save_project(project)
         self.approve("master")
+        from review_fixtures import attach_review
+        attach_review(vp, "pilot")
         vp.advance_project(slug="pilot", target="package-review")
         self.approve("package")
         vp.advance_project(slug="pilot", target="package-approved")

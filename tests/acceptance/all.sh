@@ -14,7 +14,8 @@
 #   publish owner              edited master -> owner's release + URL
 #   publish automated          edited master -> private upload, QA, release gate, URL
 #
-# Exit 0 means the starter's contract holds on this machine.
+# Exit 0 means the scripted local integration checks passed; external app
+# playback, real owner approval, and YouTube operations are not exercised.
 
 set -uo pipefail
 ROOT="$(cd "${1:-$(dirname "$0")/../..}" && pwd)"
@@ -39,7 +40,11 @@ bold "Environment"
 if "$PKA" check >/dev/null 2>&1; then ok "python and toolchain check"; record env-check pass; else bad "python and toolchain check"; record env-check FAIL; fi
 keys=$(env | grep -E '^(XAI|OPENAI|GLM|ANTHROPIC|GEMINI)_API_KEY=|^LLM_PROVIDER=' || true)
 if [ -z "$keys" ]; then ok "no model keys or provider selection in the environment"; record no-keys pass; else bad "model variables present: $keys"; record no-keys FAIL; fi
-if ls tools/llm.py tools/lmstudio.py tools/xai.py tools/glm.py tools/generate_thumbnail.py >/dev/null 2>&1; then
+provider_found=0
+for module in llm lmstudio xai glm generate_thumbnail; do
+  [ ! -e "tools/$module.py" ] || provider_found=1
+done
+if [ "$provider_found" = 1 ]; then
   bad "provider modules present"; record no-provider-modules FAIL
 else ok "no provider modules in tools/"; record no-provider-modules pass; fi
 if grep -rqE '^\s*(import|from) (llm|lmstudio|xai|glm)\b' --include='*.py' tools discord-bridge/bot.py 2>/dev/null; then
@@ -76,8 +81,8 @@ for entry in "${results[@]}"; do
 done
 if [ "$failed" = 0 ]; then
   echo
-  echo "  All three entry points run end to end on this machine with no model service and no model keys."
-  echo "  Every approval present was given by the owner; every assistant response was validated on import."
+  echo "  All five scripted local integration paths passed with known model variables cleared."
+  echo "  Approval commands used fixture owner labels. YouTube upload, playback, release and CueCam playback were not exercised."
   exit 0
 fi
 echo; echo "  One or more checks failed; see above." >&2

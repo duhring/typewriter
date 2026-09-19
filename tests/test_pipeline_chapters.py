@@ -223,6 +223,64 @@ class StageTests(unittest.TestCase):
         self.assertEqual(out['error'], 'stale_input')
         self.assertEqual(out['role'], 'package')
 
+    def reviewed_package(self):
+        self.prepare()
+        self.respond(pipeline.STAGE_PACKAGE, [{'id': 'package', 'markdown': PACKAGE}])
+        self.assertEqual(self.run_cli('package', 'import', '--project', 'garden')[0], 0)
+        self.respond(pipeline.STAGE_REVIEW, review_items())
+        self.assertEqual(self.run_cli('chapter-review', 'import', '--project', 'garden')[0], 0)
+        artwork = self.root / 'cover.png'; artwork.write_bytes(b'cover')
+        vp.attach_artifact(slug='garden', kind='thumbnail', raw_path=str(artwork))
+        vp.select_thumbnail(slug='garden', raw_path=str(artwork))
+        vp.select_title(slug='garden', title='Garden')
+        vp.approve_gate(slug='garden', gate='package', approved_by='owner')
+        vp.advance_project(slug='garden', target='package-approved')
+
+    def test_tracker_cannot_skip_chapter_review(self):
+        self.prepare()
+        self.respond(pipeline.STAGE_PACKAGE, [{'id': 'package', 'markdown': PACKAGE}])
+        self.assertEqual(self.run_cli('package', 'import', '--project', 'garden')[0], 0)
+        with self.assertRaisesRegex(ValueError, 'chapter review'):
+            vp.advance_project(slug='garden', target='package-review')
+        # Even a previously advanced project cannot approve without the review.
+        project = vp.load_project('garden'); project['state'] = 'package-review'; vp.save_project(project)
+        with self.assertRaisesRegex(ValueError, 'chapter review'):
+            vp.approve_gate(slug='garden', gate='package', approved_by='owner')
+
+    def test_changed_package_requires_new_review_for_approval_upload_and_completion(self):
+        self.reviewed_package()
+        package = vp.resolve_path(vp.current_artifact(vp.load_project('garden'), 'youtube_package')['path'])
+        package.write_text(package.read_text().replace('Composting', 'Unsupported replacement'))
+        vp.attach_artifact(slug='garden', kind='youtube_package', raw_path=str(package))
+        with self.assertRaisesRegex(ValueError, 'chapter review'):
+            vp.approve_gate(slug='garden', gate='package', approved_by='owner')
+        project = vp.load_project('garden')
+        self.assertFalse(vp.approval_is_current(project, 'package'))
+        with self.assertRaisesRegex(ValueError, 'approvals'):
+            vp.entry_completion(project)
+        project['publication_mode'] = 'automated-private'; vp.save_project(project)
+        with patch.object(pipeline, 'run') as run:
+            with self.assertRaisesRegex(ValueError, 'approval'):
+                pipeline.upload_project(types.SimpleNamespace(project='garden', dry_run=False))
+            run.assert_not_called()
+
+    def test_changed_transcript_stales_review_even_when_reattached(self):
+        self.reviewed_package()
+        self.transcript.write_text(self.transcript.read_text() + '\nChanged source meaning.')
+        vp.attach_artifact(slug='garden', kind='transcript', raw_path=str(self.transcript))
+        self.assertFalse(vp.chapter_review_is_current(vp.load_project('garden')))
+        with self.assertRaisesRegex(ValueError, 'chapter review'):
+            vp.approve_gate(slug='garden', gate='package', approved_by='owner')
+
+    def test_master_change_rejects_inflight_package_response(self):
+        self.prepare()
+        self.respond(pipeline.STAGE_PACKAGE, [{'id': 'package', 'markdown': PACKAGE}])
+        self.master.write_bytes(b'a new edit')
+        code, out = self.run_cli('package', 'import', '--project', 'garden')
+        self.assertEqual(code, 1)
+        self.assertEqual(out['error'], 'stale_input')
+        self.assertEqual(out['role'], 'master')
+
     def test_no_model_provider_and_no_one_shot(self):
         source = (Path(__file__).resolve().parents[1] / 'tools' / 'pipeline.py').read_text()
         for token in ('import llm', 'llm.chat', 'legacy_main', 'one-shot', 'discord-bridge/venv'):

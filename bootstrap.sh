@@ -44,7 +44,8 @@ step "1/6 Homebrew packages"
 if [ "$SKIP_BREW" = 1 ]; then
   warn "skipped (--skip-brew)"
 elif command -v brew >/dev/null 2>&1; then
-  brew bundle --file="$ROOT/Brewfile" --no-upgrade >/dev/null && ok "brew bundle satisfied"
+  brew bundle --file="$ROOT/Brewfile" --no-upgrade >/dev/null || { fail "Homebrew dependency installation failed"; exit 1; }
+  ok "brew bundle satisfied"
 else
   warn "Homebrew not found. Install from https://brew.sh then re-run, or use --skip-brew and install python, ffmpeg, yt-dlp yourself."
 fi
@@ -105,9 +106,11 @@ else
   "$PY" -m venv "$VENV" && ok "created venv at discord-bridge/venv"
 fi
 "$VENV/bin/pip" install --quiet --upgrade pip
-"$VENV/bin/pip" install --quiet -r "$ROOT/requirements.txt" && ok "requirements installed"
+"$VENV/bin/pip" install --quiet -r "$ROOT/requirements.txt" || { fail "Python dependency installation failed"; exit 1; }
+ok "requirements installed"
 if [ "$WITH_TRANSCRIBE" = 1 ]; then
-  "$VENV/bin/pip" install --quiet -r "$ROOT/requirements-transcribe.txt" && ok "local Whisper installed"
+  "$VENV/bin/pip" install --quiet -r "$ROOT/requirements-transcribe.txt" || { fail "Whisper installation failed"; exit 1; }
+  ok "local Whisper installed"
 fi
 
 # 3. Secrets and machine identity --------------------------------------------
@@ -132,14 +135,16 @@ fi
 
 # 4. Local database -------------------------------------------------------------
 step "4/6 Local SQLite database"
-"$VENV/bin/python3" tools/pka_db.py init >/dev/null && ok "data/pka.db initialized (idempotent)"
+"$VENV/bin/python3" tools/pka_db.py init >/dev/null || { fail "Database initialization failed"; exit 1; }
+ok "data/pka.db initialized (idempotent)"
 
 # 5. Smoke tests --------------------------------------------------------------
 step "5/6 Smoke tests"
 if "$VENV/bin/python3" -m unittest discover -s tests -q >/tmp/pka-bootstrap-tests.log 2>&1; then
   ok "tests pass ($(grep -oE 'Ran [0-9]+ tests' /tmp/pka-bootstrap-tests.log))"
 else
-  warn "tests failed. See /tmp/pka-bootstrap-tests.log"; tail -20 /tmp/pka-bootstrap-tests.log
+  fail "tests failed. See /tmp/pka-bootstrap-tests.log"; tail -20 /tmp/pka-bootstrap-tests.log
+  exit 1
 fi
 
 # 6. Optional tools, by the workflow that needs them ---------------------------
