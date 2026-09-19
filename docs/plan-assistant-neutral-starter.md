@@ -163,7 +163,7 @@ One ticket per row, in dependency order. Phase numbers match the order of work.
 | T8 | `develop` clean-install acceptance run, with instructions for the develop path. Done 2026-09-18: `tests/acceptance/develop.sh` plays the assistant with canned response files and runs interview to completed project; passed on a fresh clone after bootstrap with every model variable unset (4 requests, 4 imports, brief and deck the only approvals, no video material). `AGENTS.md` rewritten for any assistant with the develop path, within the harness word budget | T2 to T7 | 2 |
 | T9 | Transcript fetch decoupled from extraction; extract prepare and import. Done 2026-09-18: `fetch-transcript` only fetches and names the next command; `extract_structured transcript\|meeting prepare\|import` with one item per extract; every cited timestamp is checked against the transcript (was a prompt instruction); 15 deterministic functions byte-identical; `docs/larry/youtube-writing.md` updated | T1 | 3 |
 | T10 | Tracker: article-only output, interview as source, `blog_final` gate, article completion, tests. Done 2026-09-18: `blog_final` gate bound to the exact final file (stale on edit), new `blog-final-approved` state, article entry completes on that gate and delivers `blog_final`; interview accepted as the source for a standalone article; article-only output legal; `--outputs` defaults by entry; `docs/larry/video-production.md` updated | T7 | 3 |
-| T11 | `article` acceptance runs, raw intake and transcript separately, with instructions for the article path | T9, T10 | 3 |
+| T11 | `article` acceptance runs, raw intake and transcript separately, with instructions for the article path. Done 2026-09-18: `tests/acceptance/article.sh intake\|transcript` runs source to completed project including the extract handoff (transcript mode), the two blog gates, and the final approval refusing an edited file; both modes passed on a fresh clone with every model variable unset. `AGENTS.md` article section added within the word budget | T9, T10 | 3 |
 | T12 | Pipeline: two sequential handoffs, package bound to transcript and source inputs, then chapter review bound to the imported package's hash | T1 | 4 |
 | T13 | Supplied artwork as the thumbnail input; remove API generation from the pipeline | | 4 |
 | T14 | Tracker: publish completion with owner release and recorded URL, tests | T7 | 4 |
@@ -173,7 +173,7 @@ One ticket per row, in dependency order. Phase numbers match the order of work.
 | T18 | `AGENTS.md` as the primary workflow document; Claude files point at it | T8, T11, T15 | 5 |
 | T19 | Clean-install verification of all three entries on a machine with no keys and no model server | T16 to T18 | 5 |
 
-First milestone reached 2026-09-18: T1 to T8 done and committed; the develop path runs end to end on a fresh install with no model service or keys. Next: phase 3, the article path (T9 to T11).
+First milestone reached 2026-09-18: T1 to T8 done and committed; the develop path runs end to end on a fresh install with no model service or keys. Phase 3 (article path, T9 to T11) done 2026-09-18. Next: phase 4, the publish path (T12 to T15).
 
 ## Back-port
 

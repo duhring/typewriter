@@ -9,7 +9,7 @@ The workflow coordinates existing tools; it does not replace them.
 Create one project before substantive development:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/video_project.py create \
+bin/pka video_project.py create \
   --title "Working Title" --slug working-title \
   --summary "What this video is intended to accomplish"
 ```
@@ -62,7 +62,7 @@ what. Change the flow there, never in a note — and keep it in step with sectio
 Both files are generated. Never hand-edit them; regenerate with:
 
 ```bash
-tools/video_project.py render --slug <slug>
+bin/pka video_project render --slug <slug>
 ```
 
 ## State Sequence
@@ -82,9 +82,9 @@ When a known issue prevents safe progress, make it explicit. Active blockers
 prevent every state transition until resolved:
 
 ```bash
-tools/video_project.py block --slug <slug> \
+bin/pka video_project block --slug <slug> \
   --message "Need the licensed source image" --owner John
-tools/video_project.py resolve-blocker --slug <slug> --id <id> \
+bin/pka video_project resolve-blocker --slug <slug> --id <id> \
   --resolution "John supplied an owner-created replacement"
 ```
 
@@ -94,15 +94,15 @@ Follow `docs/larry/development.md` for interview, challenge, outline, balance
 check, and brief creation. Register the standard folder in one pass:
 
 ```bash
-tools/video_project.py sync-development --slug <slug>
-tools/video_project.py advance --slug <slug> --to brief-review
+bin/pka video_project sync-development --slug <slug>
+bin/pka video_project advance --slug <slug> --to brief-review
 ```
 
 After John reviews the exact brief:
 
 ```bash
-tools/video_project.py approve --slug <slug> --gate brief --by John
-tools/video_project.py advance --slug <slug> --to brief-approved
+bin/pka video_project approve --slug <slug> --gate brief --by John
+bin/pka video_project advance --slug <slug> --to brief-approved
 ```
 
 If the brief or any attached supporting development artifact changes afterward,
@@ -113,10 +113,10 @@ its hash changes and the approval becomes stale.
 Generate the `.cuecam` bundle with `tools/cuecam.py`, then attach and review it:
 
 ```bash
-tools/video_project.py advance --slug <slug> --to deck-review
-tools/video_project.py attach --slug <slug> --kind cuecam_bundle --path <bundle.cuecam>
-tools/video_project.py approve --slug <slug> --gate deck --by John
-tools/video_project.py advance --slug <slug> --to deck-approved
+bin/pka video_project advance --slug <slug> --to deck-review
+bin/pka video_project attach --slug <slug> --kind cuecam_bundle --path <bundle.cuecam>
+bin/pka video_project approve --slug <slug> --gate deck --by John
+bin/pka video_project advance --slug <slug> --to deck-approved
 ```
 
 Reference images may be recorded with `--source` and `--rights`. Package
@@ -127,12 +127,12 @@ approval later refuses thumbnail references whose rights field is empty.
 Attach the raw recording, advance, then use silence-only cleanup:
 
 ```bash
-tools/video_project.py attach --slug <slug> --kind raw_recording --path <recording.mov>
-tools/video_project.py advance --slug <slug> --to recorded
-discord-bridge/venv/bin/python3 tools/clean_video.py <recording.mov> --no-stumbles
-tools/video_project.py attach --slug <slug> --kind cleaned_video --path <recording_cleaned.mp4>
-tools/video_project.py advance --slug <slug> --to clean-ready
-tools/video_project.py advance --slug <slug> --to manual-edit
+bin/pka video_project attach --slug <slug> --kind raw_recording --path <recording.mov>
+bin/pka video_project advance --slug <slug> --to recorded
+bin/pka clean_video.py <recording.mov> --no-stumbles
+bin/pka video_project attach --slug <slug> --kind cleaned_video --path <recording_cleaned.mp4>
+bin/pka video_project advance --slug <slug> --to clean-ready
+bin/pka video_project advance --slug <slug> --to manual-edit
 ```
 
 Stop. John edits externally and identifies the final export.
@@ -142,8 +142,8 @@ Stop. John edits externally and identifies the final export.
 Run the complete QC scan; `--quick` deliberately cannot pass the master gate:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/video_qc.py <final-master.mp4> --project <slug>
-tools/video_project.py advance --slug <slug> --to master-qc
+bin/pka video_qc.py <final-master.mp4> --project <slug>
+bin/pka video_project advance --slug <slug> --to master-qc
 ```
 
 The report checks decode integrity, streams, duration, resolution, codec, frame
@@ -151,7 +151,7 @@ rate, sample rate, rotation, and black/silent edges. John must still complete
 the human playback checklist, then approve the exact master and QC report:
 
 ```bash
-tools/video_project.py approve --slug <slug> --gate master --by John
+bin/pka video_project approve --slug <slug> --gate master --by John
 ```
 
 For a video whose brief, deck, recording, and manual edit were completed before
@@ -160,7 +160,7 @@ a project record existed, create the project, run the same full QC with
 artifacts or approvals:
 
 ```bash
-tools/video_project.py import-master --slug <slug> \
+bin/pka video_project import-master --slug <slug> \
   --note "Externally produced video imported after manual edit."
 ```
 
@@ -171,7 +171,7 @@ approval is still required afterward.
 ## 5. Package Without Uploading
 
 ```bash
-discord-bridge/venv/bin/python3 tools/pipeline.py package \
+bin/pka pipeline.py package \
   --project <slug> \
   --reference-image <path> --reference-rights "owner-created"
 ```
@@ -183,17 +183,17 @@ optionally generates a thumbnail candidate, attaches everything, and stops in
 Review all materials together:
 
 ```bash
-tools/video_project.py review-package --slug <slug>
-tools/video_project.py select-title --slug <slug> --option 2 --title "Chosen title"
-tools/video_project.py select-thumbnail --slug <slug> --path <thumbnail.png>
-tools/video_project.py approve --slug <slug> --gate package --by John
-tools/video_project.py advance --slug <slug> --to package-approved
+bin/pka video_project review-package --slug <slug>
+bin/pka video_project select-title --slug <slug> --option 2 --title "Chosen title"
+bin/pka video_project select-thumbnail --slug <slug> --path <thumbnail.png>
+bin/pka video_project approve --slug <slug> --gate package --by John
+bin/pka video_project advance --slug <slug> --to package-approved
 ```
 
 ## 6. Private Upload and YouTube QA
 
 ```bash
-discord-bridge/venv/bin/python3 tools/pipeline.py upload --project <slug>
+bin/pka pipeline.py upload --project <slug>
 ```
 
 The upload is always private and applies the selected thumbnail. Then review in
@@ -212,20 +212,20 @@ Optional/manual Studio items are `monetization`, `playlist`, `end-screen`, and
 `cards`. Mark a legitimately irrelevant item with `--na-item`.
 
 ```bash
-tools/video_project.py youtube-qa --slug <slug> \
+bin/pka video_project youtube-qa --slug <slug> \
   --pass-item playback --pass-item hd-processing --pass-item title \
   --pass-item description-links --pass-item chapters \
   --pass-item thumbnail-mobile --pass-item captions --pass-item audience
-tools/video_project.py approve --slug <slug> --gate release --by John
-tools/video_project.py advance --slug <slug> --to release-approved
+bin/pka video_project approve --slug <slug> --gate release --by John
+bin/pka video_project advance --slug <slug> --to release-approved
 ```
 
 Changing privacy in YouTube Studio remains a manual owner action. Afterward,
 record the public URL and advance:
 
 ```bash
-tools/video_project.py publication --slug <slug> --channel youtube --url <url>
-tools/video_project.py advance --slug <slug> --to published
+bin/pka video_project publication --slug <slug> --channel youtube --url <url>
+bin/pka video_project advance --slug <slug> --to published
 ```
 
 ## 7. Editorial Loop and Substack Adaptation
@@ -239,7 +239,7 @@ five-question interview about what the recording actually turned out to be. This
 is Larry interrogating, same as the intake interview — not Reed drafting.
 
 ```bash
-tools/video_project.py attach --slug <slug> --kind editorial_interview \
+bin/pka video_project attach --slug <slug> --kind editorial_interview \
   --path owners-inbox/development/<slug>/editorial-interview.md
 ```
 
@@ -247,7 +247,7 @@ tools/video_project.py attach --slug <slug> --kind editorial_interview \
 confirms the thesis before anyone drafts against it.
 
 ```bash
-tools/video_project.py attach --slug <slug> --kind blog_thesis \
+bin/pka video_project attach --slug <slug> --kind blog_thesis \
   --path owners-inbox/development/<slug>/blog-thesis.md
 ```
 
@@ -255,7 +255,7 @@ tools/video_project.py attach --slug <slug> --kind blog_thesis \
 conversion:
 
 ```bash
-tools/video_project.py substack-brief --slug <slug> \
+bin/pka video_project substack-brief --slug <slug> \
   --pov "John's direction" --reader "Intended reader" \
   --mode companion --adds "What the article adds" --cta "Desired action"
 ```
@@ -298,7 +298,7 @@ are recorded but not gated.
 Record manual 48-hour, 7-day, and 30-day snapshots:
 
 ```bash
-tools/video_project.py metrics --slug <slug> --window 7d \
+bin/pka video_project metrics --slug <slug> --window 7d \
   --views 1200 --ctr 4.8 --average-view 3:42 --substack-opens 600
 ```
 
@@ -318,7 +318,7 @@ a stage deliberately skipped. Record it as it happens; a decision reconstructed
 weeks later is a guess.
 
 ```bash
-tools/video_project.py decision --slug <slug> --stage master \
+bin/pka video_project decision --slug <slug> --stage master \
   --summary "Re-exported the master" \
   --why "59px HDMI black bar in the first export" \
   --artifact final_master --by John
@@ -342,7 +342,7 @@ one. Nothing can skip a step, so an observation cannot present itself as closed
 without the evidence for each stage of getting there.
 
 ```bash
-tools/video_project.py observation --slug <slug> --stage editorial \
+bin/pka video_project observation --slug <slug> --stage editorial \
   --summary "The editorial interview came too late to shape the YouTube framing" \
   --proposes "Move it immediately after master transcription" \
   --artifact transcript --artifact youtube_package --by John
@@ -359,10 +359,10 @@ transition — it cannot be supplied early and banked to satisfy a later step:
   must have been created after the observation was raised.
 
 ```bash
-tools/video_project.py observation-status --slug <slug> --id <id> --status accepted
-tools/video_project.py observation-status --slug <slug> --id <id> --status implemented \
+bin/pka video_project observation-status --slug <slug> --id <id> --status accepted
+bin/pka video_project observation-status --slug <slug> --id <id> --status implemented \
   --changed docs/larry/video-production.md
-tools/video_project.py observation-status --slug <slug> --id <id> --status verified \
+bin/pka video_project observation-status --slug <slug> --id <id> --status verified \
   --verified-by-run <later-slug>
 ```
 
@@ -379,7 +379,7 @@ Maven's drafting rules live.
 After a run completes, generate its retrospective:
 
 ```bash
-tools/video_project.py retrospective --slug <slug>
+bin/pka video_project retrospective --slug <slug>
 ```
 
 It reports divergence from the designed flow, rework (artifacts replaced after
@@ -400,7 +400,7 @@ retrospective so the run page is not a dead end.
 The cross-run view is Dreamer's, compiled from every manifest:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py pipeline
+bin/pka wiki_compile.py pipeline
 ```
 
 That writes `wiki/operations/video-editorial-pipeline.md`: a run table, a stage
@@ -416,7 +416,7 @@ runs. Neither writes into the other's pages.
 For a low-stakes video where John explicitly declines manual gates:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/pipeline.py one-shot --privacy private --yes
+bin/pka pipeline.py one-shot --privacy private --yes
 ```
 
 Bare `pipeline.py` no longer launches the entire publish path accidentally.

@@ -28,9 +28,30 @@ bin/pka video_project sync-development --slug S; advance; approve --gate brief; 
 
 `bin/pka challenge --slug S status` and `bin/pka video_project status --slug S` say what to do next. The project completes on a current deck approval and the delivered bundle; no video material is required.
 
-### Publish and article
+### Article: video or intake to a written piece
 
-Being moved onto the same handoff shape. Until their sections land here, follow `docs/larry/video-production.md` and `docs/larry/youtube-writing.md`.
+Procedure: `docs/larry/video-production.md` section 7 and `docs/larry/youtube-writing.md`. Worked examples: `tests/acceptance/article.sh intake|transcript`.
+
+```
+(transcript source)  bin/pka fetch-transcript <url or file>
+                     bin/pka extract_structured transcript prepare --file owners-inbox/transcripts/<f>.md
+                     (write transcript-extract.response.json; every cited timestamp must be in the transcript)
+                     bin/pka extract_structured transcript import --dir owners-inbox/transcript-extracts/requests/<f>
+(intake source)      interview the owner; save owners-inbox/development/S/interview.md
+bin/pka video_project create --title "<title>" --slug S --entry article
+bin/pka video_project attach --slug S --kind transcript|interview --path <source>
+(reflective interview, thesis confirmed by the owner)  attach --kind editorial_interview; attach --kind blog_thesis
+bin/pka video_project substack-brief --slug S --pov ... --reader ... --mode standalone|companion --adds ... --cta ...
+(developmental draft; left unfinished for the owner)   attach --kind blog_draft; owner: approve --gate blog; advance
+(owner edits by hand; you reconcile into the final)    attach --kind blog_owner_edit; attach --kind blog_final
+owner: approve --gate blog_final; advance; advance     # -> complete
+```
+
+The final approval is bound to the exact file: editing `blog_final` after approval makes it stale until the owner approves again. The project delivers the final article; no video, YouTube, or publication record is needed.
+
+### Publish
+
+The publish entry (edited master to YouTube) is being moved onto the same handoff shape. Until its section lands here, follow `docs/larry/video-production.md`.
 
 ## Governing principle
 
