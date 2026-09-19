@@ -1,6 +1,6 @@
-# AGENTS.md — Practical Contract for Coding Agents
+# AGENTS.md — The Contract for Any Assistant
 
-This file is the working contract for any assistant operating inside the PKA repo: the owner's chosen AI assistant running the workflows below, and any coding agent changing the tools. It is written for any assistant that can read files and run commands; nothing here depends on a particular product. For high-level orientation, read [llms.txt](llms.txt) first. For Larry's routing constitution, see [CLAUDE.md](CLAUDE.md).
+This is the primary document for any assistant operating inside the PKA repo: the owner's chosen AI assistant running the workflows, and any coding agent changing the tools. It is written for any assistant that can read files and run commands; nothing essential lives anywhere else, and nothing here depends on a particular product. [llms.txt](llms.txt) is the orientation map. [CLAUDE.md](CLAUDE.md) and `.claude/` are the Claude Code adapter (a persona, a routing table, specialist definitions): conveniences layered on this contract, never a substitute for it.
 
 ## Your role in the workflows
 

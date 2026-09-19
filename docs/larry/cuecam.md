@@ -196,25 +196,25 @@ use `tools/cuecam_recording_intake.py` as the first step before downstream trans
 Baseline the existing archive once:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/cuecam_recording_intake.py init
+bin/pka cuecam_recording_intake init
 ```
 
 Check for future recordings that are stable and not yet processed:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/cuecam_recording_intake.py scan
+bin/pka cuecam_recording_intake scan
 ```
 
 Clean the next future recording:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/cuecam_recording_intake.py process --limit 1
+bin/pka cuecam_recording_intake process --limit 1
 ```
 
 For a fast silence-only first pass, use:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/cuecam_recording_intake.py process --limit 1 --no-stumbles
+bin/pka cuecam_recording_intake process --limit 1 --no-stumbles
 ```
 
 The intake state lives at `data/cuecam_recording_intake.json`. Do not bulk-process the current archive unless the owner explicitly asks for backfill; this workflow is for new recordings going forward.
@@ -237,7 +237,7 @@ Trigger phrases: "clean this video: <path>", "prep <path> for editing", "remove 
 2. Run a **silence-only** clean (leave words intact so the owner has full material for the manual edit):
 
 ```bash
-discord-bridge/venv/bin/python3 tools/clean_video.py "<source-video>" --no-stumbles
+bin/pka clean_video "<source-video>" --no-stumbles
 ```
 
 3. Report back the cleaned file path (it lands as `<source>_cleaned.mp4` alongside the source), and explicitly tell the owner it is **ready for their manual edit**. Close the turn with: "When the edited copy is ready, tell me where it lives and I'll finish and publish it."
@@ -250,7 +250,7 @@ Trigger phrases: "the edited copy is at <path>, finish it", "publish <path> to Y
 The owner's edited copies typically land in `~/Downloads` (post-CapCut export). If they name a path, use it; otherwise default to the most recently modified video in `~/Downloads`.
 
 First run `tools/video_qc.py <edited-file> --project <slug>` and obtain John's
-master approval. Then run `tools/pipeline.py package --project <slug>`, review
+master approval. Then run `bin/pka pipeline package prepare --project <slug>` (the package and chapter review are the assistant's handoffs, see `docs/larry/video-production.md`), review
 and approve the title/description/thumbnail package, and only then run
 `tools/pipeline.py upload --project <slug>`. Upload is private; changing privacy
 remains a separate explicit owner decision after YouTube QA.
@@ -259,13 +259,10 @@ remains a separate explicit owner decision after YouTube QA.
 
 If the owner explicitly wants a fresh raw recording cleaned and published in a single pass with no manual edit — trigger phrases "process my latest recording", "clean and upload", "run the full pipeline" — run all 5 steps:
 
-```bash
-python3 tools/pipeline.py one-shot --privacy private --yes
-```
+(There is no one-shot path: every publish passes through the assistant's chapter review and the owner's package approval.)
 
 Takes ~6–8 minutes. Confirm the YouTube URL and title options when done.
 
-**Note:** only `pipeline.py one-shot` auto-detects the newest recording. The
 manual-first `package` and `upload` commands resolve artifacts from the video
 project manifest.
 
@@ -290,7 +287,7 @@ This is the copy-paste recipe to follow when you see a Discord message containin
    - skip regular CueCam cards entirely; only HyperFrames cards belong in the sidecar
 5. **Index the sidecar.**
    ```bash
-   discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown \
+   bin/pka pka_index index-markdown \
      --file owners-inbox/presentations/<bundle-stem>.hyperframes.md \
      --category cuecam-hyperframes \
      --tags "hyperframes, cuecam, motion-graphics" \
@@ -363,7 +360,7 @@ Only include `## Card N` sections for cards that are HyperFrames cards. Skip reg
 Index the sidecar:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown \
+bin/pka pka_index index-markdown \
   --file owners-inbox/presentations/<deck-slug>.hyperframes.md \
   --category cuecam-hyperframes \
   --tags "hyperframes, cuecam, motion-graphics" \
@@ -440,7 +437,7 @@ The Codex anchor matcher reads this directly to find each `show_anchor` / `hide_
 `cuecam_recording_intake.py` auto-pairs a recording to a sidecar when there is exactly one `*.hyperframes.md` whose mtime is within ±7 days of the recording (configurable via `--sidecar-window-days`). When multiple sidecars match, the intake records all of them under `sidecar_candidates` and instructs the explicit pair subcommand:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/cuecam_recording_intake.py pair \
+bin/pka cuecam_recording_intake pair \
   "<recording-path>" \
   "owners-inbox/presentations/<deck-slug>.hyperframes.md"
 ```
@@ -514,7 +511,7 @@ Ask for approval or edits before writing anything.
 On approval, write `owners-inbox/presentations/<deck-slug>.hyperframes.md` using the standard shape. Then index it:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown \
+bin/pka pka_index index-markdown \
   --file owners-inbox/presentations/<deck-slug>.hyperframes.md \
   --category cuecam-hyperframes \
   --tags "hyperframes, cuecam, post-production" \
@@ -524,7 +521,7 @@ discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown \
 **8. Update intake state.**
 
 ```bash
-discord-bridge/venv/bin/python3 tools/cuecam_recording_intake.py pair \
+bin/pka cuecam_recording_intake pair \
   "<recording-path>" \
   "owners-inbox/presentations/<deck-slug>.hyperframes.md"
 ```

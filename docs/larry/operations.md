@@ -101,7 +101,7 @@ If the owner refers to an active effort loosely, by people involved, or by the r
 
 ## Database
 
-- SQLite database path: `data/pka.db` — **per-machine under federation** (see `docs/federation.md`). Each peer owns its own DB; databases are never synced between machines. Bootstrap a fresh peer with `python3 tools/pka_db.py init`.
+- SQLite database path: `data/pka.db` — **per-machine under federation** (see `docs/federation.md`). Each peer owns its own DB; databases are never synced between machines. Bootstrap a fresh peer with `bin/pka pka_db init`.
 - It stores: knowledge base entries, journal entries, contacts, meetings, projects, file index, images, glossary, entry-contact links, `kb_links`, and governed `records`
 - Use the database for structured state and the filesystem for documents/deliverables
 - Journal images are stored in `data/journal-images/`

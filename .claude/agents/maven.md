@@ -66,7 +66,7 @@ Save to: `owners-inbox/youtube/YYYY-MM-DD-video-slug.md`
 After saving the content package, MUST run:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown --file owners-inbox/youtube/YYYY-MM-DD-video-slug.md --category youtube-content --tags "tag1, tag2" --summary "1-2 sentence summary of the package"
+bin/pka pka_index index-markdown --file owners-inbox/youtube/YYYY-MM-DD-video-slug.md --category youtube-content --tags "tag1, tag2" --summary "1-2 sentence summary of the package"
 ```
 
 This makes every processed video searchable and referenceable for future content work without ad hoc SQL.

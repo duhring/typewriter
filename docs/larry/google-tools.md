@@ -9,7 +9,7 @@ When the owner asks for a brief:
 1. Run:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/morning-brief.py
+bin/pka morning-brief
 ```
 
 2. Return the output directly
@@ -22,15 +22,15 @@ discord-bridge/venv/bin/python3 tools/morning-brief.py
 When the owner wants a quick health check for Google tool auth, run:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/auth_doctor.py
+bin/pka auth_doctor
 ```
 
 You can also check individual services:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/gcal.py doctor
-discord-bridge/venv/bin/python3 tools/gdocs.py doctor
-discord-bridge/venv/bin/python3 tools/gsheets.py doctor
+bin/pka gcal doctor
+bin/pka gdocs doctor
+bin/pka gsheets doctor
 ```
 
 Use this before a brief or when Calendar, Docs, or Sheets start failing unexpectedly.
@@ -43,22 +43,22 @@ Larry handles calendar operations directly using `tools/gcal.py`.
 
 ```bash
 # List today's events
-discord-bridge/venv/bin/python3 tools/gcal.py list
+bin/pka gcal list
 
 # List a date range
-discord-bridge/venv/bin/python3 tools/gcal.py list --from 2026-03-26 --to 2026-03-28
+bin/pka gcal list --from 2026-03-26 --to 2026-03-28
 
 # Create an event
-discord-bridge/venv/bin/python3 tools/gcal.py create --title "Meeting with Sarah" --start "2026-03-26 14:00" --end "2026-03-26 15:00" --description "Discuss project"
+bin/pka gcal create --title "Meeting with Sarah" --start "2026-03-26 14:00" --end "2026-03-26 15:00" --description "Discuss project"
 
 # Search events
-discord-bridge/venv/bin/python3 tools/gcal.py search "Sarah"
+bin/pka gcal search "Sarah"
 
 # Find free time
-discord-bridge/venv/bin/python3 tools/gcal.py free --from 2026-03-26 --to 2026-03-27
+bin/pka gcal free --from 2026-03-26 --to 2026-03-27
 
 # List calendars
-discord-bridge/venv/bin/python3 tools/gcal.py calendars
+bin/pka gcal calendars
 ```
 
 Interpret the JSON output naturally for the owner.
@@ -68,7 +68,7 @@ After creating calendar events, also log them in the `meetings` table in `data/p
 When the owner wants structured takeaways from meeting notes or a meeting transcript, use:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/extract_structured.py meeting --file owners-inbox/calendar/meeting-notes.md --title "Meeting Title" --date 2026-04-12 --attendees "Name 1, Name 2"
+bin/pka extract_structured meeting --file owners-inbox/calendar/meeting-notes.md --title "Meeting Title" --date 2026-04-12 --attendees "Name 1, Name 2"
 ```
 
 If there is already a `meetings.id` row that should be updated, add `--meeting-id ID` so the extracted summary and action items sync back into `data/pka.db`.
@@ -81,37 +81,37 @@ Larry and team members can create native Google Docs using `tools/gdocs.py`.
 
 ```bash
 # One-time auth
-discord-bridge/venv/bin/python3 tools/gdocs.py auth
+bin/pka gdocs auth
 
 # Auth health
-discord-bridge/venv/bin/python3 tools/gdocs.py doctor
+bin/pka gdocs doctor
 
 # Create from local file
-discord-bridge/venv/bin/python3 tools/gdocs.py create --title "My Post" --file owners-inbox/blog/2026-03-23-post.md
+bin/pka gdocs create --title "My Post" --file owners-inbox/blog/2026-03-23-post.md
 
 # Create from inline content
-discord-bridge/venv/bin/python3 tools/gdocs.py create --title "Meeting Notes" --content "# Notes\n- Item 1\n- Item 2"
+bin/pka gdocs create --title "Meeting Notes" --content "# Notes\n- Item 1\n- Item 2"
 
 # List docs
-discord-bridge/venv/bin/python3 tools/gdocs.py list
+bin/pka gdocs list
 
 # Read a doc
-discord-bridge/venv/bin/python3 tools/gdocs.py get DOC_ID
+bin/pka gdocs get DOC_ID
 
 # Search docs
-discord-bridge/venv/bin/python3 tools/gdocs.py search "project proposal"
+bin/pka gdocs search "project proposal"
 
 # Share a doc
-discord-bridge/venv/bin/python3 tools/gdocs.py share DOC_ID --email someone@example.com --role writer
+bin/pka gdocs share DOC_ID --email someone@example.com --role writer
 
 # Create and save the PKA folder as default
-discord-bridge/venv/bin/python3 tools/gdocs.py mkdir "PKA" --save-as-pka
+bin/pka gdocs mkdir "PKA" --save-as-pka
 
 # List folders
-discord-bridge/venv/bin/python3 tools/gdocs.py folders
+bin/pka gdocs folders
 
 # Move a file into a folder
-discord-bridge/venv/bin/python3 tools/gdocs.py move FILE_ID FOLDER_ID
+bin/pka gdocs move FILE_ID FOLDER_ID
 ```
 
 ### Usage Notes
@@ -125,8 +125,8 @@ discord-bridge/venv/bin/python3 tools/gdocs.py move FILE_ID FOLDER_ID
 When the owner references a Drive asset by name (e.g., "the 3bird video", "the rough cut from yesterday") and you don't already have the file ID or local path, search Drive instead of guessing or asking the owner to download:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/gdrive.py search --name "3bird"
-discord-bridge/venv/bin/python3 tools/gdrive.py search --name "for bird" --kind video
+bin/pka gdrive search --name "3bird"
+bin/pka gdrive search --name "for bird" --kind video
 ```
 
 Returns JSON with matches (id, name, mimeType, size, modifiedTime, webViewLink). Filter by `--kind {video,image,audio,pdf,doc,sheet,slide,folder}` when the owner's intent is clear.
@@ -136,7 +136,7 @@ Returns JSON with matches (id, name, mimeType, size, modifiedTime, webViewLink).
 If a single match is unambiguous and you need the file locally (e.g., to pass as `--asset` to `tools/cuecam.py compose`):
 
 ```bash
-discord-bridge/venv/bin/python3 tools/gdrive.py search \
+bin/pka gdrive search \
   --name "3bird" --kind video \
   --download owners-inbox/cuecam-assets/
 ```
@@ -160,28 +160,28 @@ Larry and team members can create and manage spreadsheets using `tools/gsheets.p
 
 ```bash
 # One-time auth
-discord-bridge/venv/bin/python3 tools/gsheets.py auth
+bin/pka gsheets auth
 
 # Auth health
-discord-bridge/venv/bin/python3 tools/gsheets.py doctor
+bin/pka gsheets doctor
 
 # Create a spreadsheet
-discord-bridge/venv/bin/python3 tools/gsheets.py create --title "Budget 2026" --file data.csv
+bin/pka gsheets create --title "Budget 2026" --file data.csv
 
 # Read data
-discord-bridge/venv/bin/python3 tools/gsheets.py read SPREADSHEET_ID --range "Sheet1!A1:D10"
+bin/pka gsheets read SPREADSHEET_ID --range "Sheet1!A1:D10"
 
 # Write data
-discord-bridge/venv/bin/python3 tools/gsheets.py write SPREADSHEET_ID --range "Sheet1!A1" --data '[["Name","Amount"],["Rent","2000"]]'
+bin/pka gsheets write SPREADSHEET_ID --range "Sheet1!A1" --data '[["Name","Amount"],["Rent","2000"]]'
 
 # Append rows
-discord-bridge/venv/bin/python3 tools/gsheets.py append SPREADSHEET_ID --row "John,500,2026-03-26"
+bin/pka gsheets append SPREADSHEET_ID --row "John,500,2026-03-26"
 
 # List spreadsheets
-discord-bridge/venv/bin/python3 tools/gsheets.py list
+bin/pka gsheets list
 
 # Search spreadsheets
-discord-bridge/venv/bin/python3 tools/gsheets.py search "budget"
+bin/pka gsheets search "budget"
 ```
 
 ## Google Maps
@@ -192,19 +192,19 @@ Larry can look up locations, directions, and nearby places using `tools/gmaps.py
 
 ```bash
 # Search for places
-discord-bridge/venv/bin/python3 tools/gmaps.py search "coffee shops in Palo Alto"
+bin/pka gmaps search "coffee shops in Palo Alto"
 
 # Get directions
-discord-bridge/venv/bin/python3 tools/gmaps.py directions "San Francisco" "Palo Alto" --mode driving
+bin/pka gmaps directions "San Francisco" "Palo Alto" --mode driving
 
 # Nearby places
-discord-bridge/venv/bin/python3 tools/gmaps.py nearby --location "37.4419,-122.1430" --type restaurant --radius 1000
+bin/pka gmaps nearby --location "37.4419,-122.1430" --type restaurant --radius 1000
 
 # Distance and travel time
-discord-bridge/venv/bin/python3 tools/gmaps.py distance "San Francisco" "Los Angeles"
+bin/pka gmaps distance "San Francisco" "Los Angeles"
 
 # Geocode
-discord-bridge/venv/bin/python3 tools/gmaps.py geocode "1600 Amphitheatre Parkway, Mountain View"
+bin/pka gmaps geocode "1600 Amphitheatre Parkway, Mountain View"
 ```
 
 Maps uses an API key rather than OAuth. Save the key to `data/gmaps/api_key.txt`.

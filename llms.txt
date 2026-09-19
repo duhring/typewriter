@@ -1,11 +1,11 @@
 # PKA — Personal Knowledge Assistance
 
-PKA is a markdown-first, SQLite-backed personal operating system for its owner. An orchestrator (Larry) routes work to a small team of specialist agents. Durable state lives in files and `data/pka.db`; agents are stateless consumers of that spine.
+PKA is a markdown-first, SQLite-backed personal operating system for its owner. The owner's chosen AI assistant does the thinking; PKA's tools prepare material, validate what comes back, and record approvals. No model service or key is involved. Durable state lives in files and `data/pka.db`; assistants are stateless consumers of that spine.
 
 ## Start here
 
-- [CLAUDE.md](CLAUDE.md) — Larry's constitution: routing rules, session start gate, workflow types, planning mode
-- [AGENTS.md](AGENTS.md) — Practical contract for coding agents: commands, file ownership, indexing rules, viewer/Sable boundaries
+- [AGENTS.md](AGENTS.md) — The primary contract for any assistant: the handoff rules, the three entry points, commands, file ownership, indexing, safety
+- [CLAUDE.md](CLAUDE.md) — The Claude Code adapter on top of it: Larry's persona, routing table, specialists under `.claude/`
 - [team/roster.md](team/roster.md) — Active agents and their specialties
 - [docs/federation.md](docs/federation.md) — Multi-machine operating agreement (standalone peers, local DBs, git file sync)
 - [docs/larry/operations.md](docs/larry/operations.md) — Inbox, database, knowledge-base, viewer, session start/end

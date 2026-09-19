@@ -53,7 +53,7 @@ Use WebSearch and WebFetch to fill the identified gaps. Don't re-research what w
 ### 4. Index Results (Mandatory)
 After saving the deliverable file, ALWAYS run:
 ```bash
-discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown --file owners-inbox/research-YYYY-MM-DD-topic.md --category research --tags "tag1, tag2" --summary "2-3 sentence summary"
+bin/pka pka_index index-markdown --file owners-inbox/research-YYYY-MM-DD-topic.md --category research --tags "tag1, tag2" --summary "2-3 sentence summary"
 ```
 This is not optional. Every research brief MUST produce a knowledge_base entry.
 

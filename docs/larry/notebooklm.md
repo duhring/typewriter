@@ -31,7 +31,7 @@ Run everything through the canonical venv:
 1. **Confirm auth** (once per machine; cookies persist):
 
    ```
-   discord-bridge/venv/bin/python3 tools/notebooklm.py doctor
+   bin/pka notebooklm doctor
    ```
 
    If it reports `needs_login`, the owner re-runs
@@ -42,8 +42,8 @@ Run everything through the canonical venv:
 2. **Find the notebook** when the title is fuzzy:
 
    ```
-   discord-bridge/venv/bin/python3 tools/notebooklm.py list
-   discord-bridge/venv/bin/python3 tools/notebooklm.py resolve "<title or id-prefix>"
+   bin/pka notebooklm list
+   bin/pka notebooklm resolve "<title or id-prefix>"
    ```
 
    `-n` accepts an exact title or a (partial) id, **not** a fuzzy name. The tool
@@ -54,7 +54,7 @@ Run everything through the canonical venv:
 3. **Ask:**
 
    ```
-   discord-bridge/venv/bin/python3 tools/notebooklm.py ask -n "<title-or-id>" "<question>"
+   bin/pka notebooklm ask -n "<title-or-id>" "<question>"
    ```
 
    `ask` always uses `--json` under the hood (which implies `--yes`), so it never
@@ -74,7 +74,7 @@ on for facts, run it through the receipts protocol instead of a generic Vera
 pass:
 
 ```
-discord-bridge/venv/bin/python3 tools/notebooklm.py ask -n "<title-or-id>" "<question>" --receipts
+bin/pka notebooklm ask -n "<title-or-id>" "<question>" --receipts
 ```
 
 `--receipts` adds a `receipts` block that does the **deterministic** half:

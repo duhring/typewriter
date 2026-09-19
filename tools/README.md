@@ -1,6 +1,6 @@
 # PKA Tools Registry
 
-One line per tool, grouped by domain. Run everything with `discord-bridge/venv/bin/python3 tools/<name>.py` unless a doc says otherwise. When adding a tool, add a line here and give the module a one-line docstring; Dreamer audits this file during weekly refinement.
+One line per tool, grouped by domain. Run everything with `bin/pka <name>` (the launcher picks the environment) unless a doc says otherwise. When adding a tool, add a line here and give the module a one-line docstring; Dreamer audits this file during weekly refinement.
 
 ## Video pipeline (record → publish)
 
@@ -12,7 +12,7 @@ One line per tool, grouped by domain. Run everything with `discord-bridge/venv/b
 | `fetch-transcript.py` | Fetch transcript from a YouTube URL/ID or local file (legacy hyphen name — keep for compatibility) |
 | `video_project.py` | Manual-first video state, artifact identities, approvals, publication, and metrics |
 | `video_qc.py` | Final-master technical QC plus indexed human-review checklist |
-| `pipeline.py` | Separate approved-master package and private-upload phases; explicit one-shot exception |
+| `pipeline.py` | Approved master -> package and chapter-review handoffs -> private upload; no one-shot path |
 | `publish_to_youtube.py` | Upload video using a Maven package .md for metadata |
 | `watch_video_capture.py` | Frame-aware video watching (scene-detection frames + transcript) |
 | `extract_structured.py` | Structured extracts from transcripts and meeting notes |

@@ -7,7 +7,7 @@ Larry handles journaling directly. This workflow is conversational and should no
 Use the journal CLI directly for all journal database writes:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/journal.py add ...
+bin/pka journal add ...
 ```
 
 Do not generate one-off Python scripts in `data/` for journaling.

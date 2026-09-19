@@ -2,7 +2,7 @@
 
 A portable copy of the Personal Knowledge Assistance (PKA) machinery: the tools, agent definitions, skills, and workflow docs that turn an interview into a recorded video, a YouTube package, and a written companion piece. It ships **no personal content**: no database, no inbox, no media. You supply your own corpus, keys, and machine identity.
 
-Runs on macOS (Apple Silicon or Intel) inside [Claude Code](https://claude.com/claude-code). Everything durable is Markdown files, one local SQLite database, and the CLIs in `tools/`.
+Runs on macOS (Apple Silicon or Intel) with any AI assistant that can read files and run commands ([Claude Code](https://claude.com/claude-code), Codex, or another). Everything durable is Markdown files, one local SQLite database, and the CLIs in `tools/`.
 
 ## Install
 
@@ -40,8 +40,8 @@ Any assistant that can read files and run commands uses the same launcher. No mo
 ## Layout
 
 ```
-CLAUDE.md            orchestrator constitution (Larry): routing table, work rules
-AGENTS.md            contract for coding agents working in the repo
+AGENTS.md            the primary contract for any assistant: handoffs, entry points, rules
+CLAUDE.md            the Claude Code adapter on top of it (Larry persona, routing table)
 .claude/agents/      specialists: Pax, Maven, Reed, Sable, Dreamer, Vera, Nolan
 .claude/skills/      cuecam-deck-builder plus the HyperFrames skill set
 tools/               ~60 Python CLIs; tools/README.md is the registry

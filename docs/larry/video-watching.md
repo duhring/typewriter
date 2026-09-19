@@ -31,7 +31,7 @@ as the `video_watch` task family in `_infer_task_kind()`.
    environment:
 
    ```
-   discord-bridge/venv/bin/python3 tools/watch_video_capture.py <url-or-path> --for <mode>
+   bin/pka watch_video_capture <url-or-path> --for <mode>
    ```
 
 2. **Pick `--for` by intent:**

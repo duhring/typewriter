@@ -99,7 +99,7 @@ ffmpeg -y \
 Run silence and simple repeat cleanup with word export:
 
 ```bash
-python3 tools/clean_video.py \
+bin/pka clean_video \
   "video-studio/projects/<slug>/motion/<slug>_combined.mp4" \
   --output "video-studio/projects/<slug>/motion/<slug>_cleaned.mp4" \
   --model base \
@@ -109,7 +109,7 @@ python3 tools/clean_video.py \
 Then transcribe the cleaned video so the owner sees the post-cut timeline:
 
 ```bash
-python3 tools/transcribe.py \
+bin/pka transcribe \
   "video-studio/projects/<slug>/motion/<slug>_cleaned.mp4" \
   "<Readable Title> Cleaned" \
   --model base
@@ -118,7 +118,7 @@ python3 tools/transcribe.py \
 Generate cleaned word timings for trigger resolution:
 
 ```bash
-python3 tools/clean_video.py \
+bin/pka clean_video \
   "video-studio/projects/<slug>/motion/<slug>_cleaned.mp4" \
   --no-silence --dry-run --model base \
   --export-words "video-studio/projects/<slug>/motion/words_cleaned.json"
@@ -134,7 +134,7 @@ cp owners-inbox/transcripts/<transcript-file>.md \
 ### 4. Register HyperFrames State
 
 ```bash
-python3 tools/hyperframes_state.py create \
+bin/pka hyperframes_state create \
   --slug <slug> \
   --recording "video-studio/projects/<slug>/motion/<slug>_cleaned.mp4" \
   --transcript "video-studio/projects/<slug>/motion/transcript_packed_edited.md" \
@@ -156,7 +156,7 @@ Resolve each anchor phrase against `words_cleaned.json`. The anchor must be a ve
 Append each trigger:
 
 ```bash
-python3 tools/hyperframes_state.py append-trigger --slug <slug>
+bin/pka hyperframes_state append-trigger --slug <slug>
 ```
 
 Then paste JSON on stdin, ending with EOF:
@@ -174,8 +174,8 @@ For "to end of video", omit `duration` and set `hide_anchor` to `card-end`.
 ### 6. Generate And Lint
 
 ```bash
-python3 tools/hyperframes_state.py draft-to-overlay-timing --slug <slug>
-python3 tools/hyperframes_html_gen.py --slug <slug> --force
+bin/pka hyperframes_state draft-to-overlay-timing --slug <slug>
+bin/pka hyperframes_html_gen --slug <slug> --force
 npx --yes hyperframes lint --json
 ```
 
@@ -211,7 +211,7 @@ Extract still frames at overlay times and visually confirm overlays appear.
 ### 9. Upload To Google Drive
 
 ```bash
-discord-bridge/venv/bin/python3 tools/gdrive.py upload \
+bin/pka gdrive upload \
   --file "video-studio/projects/<slug>/hyperframes/renders/<render>.mp4" \
   --folder "PKA Reviews/<slug>"
 ```
@@ -219,7 +219,7 @@ discord-bridge/venv/bin/python3 tools/gdrive.py upload \
 If token is expired, owner runs:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/gdocs.py auth
+bin/pka gdocs auth
 ```
 
 Then retry upload.
@@ -227,7 +227,7 @@ Then retry upload.
 Record the link:
 
 ```bash
-python3 tools/hyperframes_state.py advance \
+bin/pka hyperframes_state advance \
   --slug <slug> \
   --to uploaded \
   --rendered-video "video-studio/projects/<slug>/hyperframes/renders/<render>.mp4" \

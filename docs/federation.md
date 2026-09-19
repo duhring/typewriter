@@ -18,7 +18,7 @@ The durable spine is unchanged: **Markdown files + `data/pka.db` + `tools/` CLIs
 ## 2. Databases are local and independent
 
 - `data/pka.db` is **per-machine** and **never synced**. SQLite cannot merge concurrent writes, so the DB is deliberately not shared. Each peer's journal, knowledge base, records, and contacts are its own.
-- Bootstrap a fresh peer's DB with `python3 tools/pka_db.py init` (idempotent).
+- Bootstrap a fresh peer's DB with `bin/pka pka_db init` (idempotent).
 - Two machines' databases will diverge over time. **That is expected and correct** under federation. The durable *file* layer (markdown under `owners-inbox/`, `wiki/`, `docs/`) is the shared memory; the DB is each machine's local index of it.
 - If you want a machine to reflect another's structured state, re-index that machine's `owners-inbox/` markdown locally — do not copy a DB file between machines.
 - Numeric database IDs are peer-local and are never portable identity. Shared task records use `project_key`; after pulling task changes, run `tools/task_record.py sync-local` to reconcile names, states, and indexes into that peer's DB.
@@ -64,26 +64,26 @@ Each machine may run its own Discord bridge with its own bot token. Two processe
 
 ## 8. Health and freshness
 
-- `python3 tools/pka_health.py` is the per-machine definition of done. Exit 0 = clean.
+- `bin/pka pka_health` is the per-machine definition of done. Exit 0 = clean.
 - Under federation, unindexed `owners-inbox/` markdown is a real warning on every machine (no "queue for the mini" exemption). Each machine is responsible for indexing its own corpus.
-- `python3 tools/machine_heartbeat.py` posts a liveness signal with the sha256 of this file as a version stamp.
+- `bin/pka machine_heartbeat` posts a liveness signal with the sha256 of this file as a version stamp.
 
 ## 9. Onboarding a new peer
 
 1. `git clone` the repo.
 2. Create `config/machine.local.json` with a unique `machine_id`, `role: "standalone"`, `db_write: true`, and a distinct `corpus_id`.
-3. `python3 tools/pka_db.py init` to create the local DB.
+3. `bin/pka pka_db init` to create the local DB.
 4. Set up `discord-bridge/.env` with a dedicated bot token (never reuse another machine's).
 5. Provide LLM credentials via environment or `.env` as needed.
-6. Run `python3 tools/pka_health.py`; expect warnings about unindexed markdown until the corpus is indexed locally.
+6. Run `bin/pka pka_health`; expect warnings about unindexed markdown until the corpus is indexed locally.
 7. Index the local `owners-inbox/` markdown (or accept that this peer starts with an empty index and grows its own).
-8. Run `python3 tools/task_record.py sync-local` so shared task state is represented by local DB rows without trusting another peer's numeric IDs.
+8. Run `bin/pka task_record sync-local` so shared task state is represented by local DB rows without trusting another peer's numeric IDs.
 
 ## 9a. Python venvs (this MacBook)
 
 This M1 MacBook runs a **native arm64 venv** at `discord-bridge/venv`, built with `uv`-installed CPython 3.13.14 (arm64). It holds torch 2.13.0 (MPS-enabled) and openai-whisper, so the video transcription pipeline runs natively without Rosetta. The legacy Rosetta environment, when needed for diagnosis, is retained separately at `discord-bridge/venv-x86`.
 
-- **Use `discord-bridge/venv/bin/python3` for all tool invocations** on this machine.
+- **Run every tool through `bin/pka <tool>`** on this machine; the launcher finds the environment bootstrap created.
 - The video-studio shell scripts (`video-studio/bin/run_whisper_edit.sh`) call bare `whisper`; invoke them with the venv on PATH, e.g. `PATH="$PWD/discord-bridge/venv/bin:$PATH" ./video-studio/bin/run_whisper_edit.sh /path/to/raw.mp4`.
 - Python venvs are not relocatable. If this directory must move or be renamed, recreate it at the destination rather than moving it; generated console scripts contain absolute interpreter paths.
 

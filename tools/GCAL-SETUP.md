@@ -52,7 +52,7 @@ PKA/data/gcal/client_secret.json
 
 Run this command from the PKA folder:
 ```bash
-discord-bridge/venv/bin/python3 tools/gcal.py auth
+bin/pka gcal auth
 ```
 
 A browser window will open. Sign in with your Google account and grant calendar access. You'll see a success message in the terminal.
@@ -60,7 +60,7 @@ A browser window will open. Sign in with your Google account and grant calendar 
 ## Step 7: Test
 
 ```bash
-discord-bridge/venv/bin/python3 tools/gcal.py list
+bin/pka gcal list
 ```
 
 You should see today's calendar events as JSON.

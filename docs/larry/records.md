@@ -201,8 +201,8 @@ Rule:
 Use the records CLI for governed registration:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/records.py ensure-schema
-discord-bridge/venv/bin/python3 tools/records.py upsert \
+bin/pka records ensure-schema
+bin/pka records upsert \
   --title "Sonoma 2026 Receipts Ledger" \
   --record-class financial-statement \
   --series sonoma-receipts-2026 \
@@ -217,7 +217,7 @@ discord-bridge/venv/bin/python3 tools/records.py upsert \
 For markdown artifacts, prefer the existing indexing flow with record metadata:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown \
+bin/pka pka_index index-markdown \
   --file owners-inbox/taxes/2025-sonoma-income-statement.md \
   --category finance \
   --tags taxes,sonoma \

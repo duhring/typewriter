@@ -28,7 +28,7 @@ produce these files and indexes them into its own local DB. After a development
 pass, register every artifact that exists in the shared project manifest:
 
 ```
-discord-bridge/venv/bin/python3 tools/video_project.py sync-development --slug <slug>
+bin/pka video_project sync-development --slug <slug>
 ```
 
 ## Stage 1 — Intake Interview ("expert extraction")

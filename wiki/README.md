@@ -18,43 +18,43 @@ It is the human-readable synthesis view generated from source material in `data/
 Project pages can be refreshed with:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py projects --project "PKA System"
+bin/pka wiki_compile projects --project "PKA System"
 ```
 
 All project pages can be refreshed with:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py projects --all
+bin/pka wiki_compile projects --all
 ```
 
 Concept pages can be refreshed with:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py concepts --all
+bin/pka wiki_compile concepts --all
 ```
 
 People pages can be refreshed with:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py people --all
+bin/pka wiki_compile people --all
 ```
 
 Freshness and contradiction audit:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py audit
+bin/pka wiki_compile audit
 ```
 
 Safe repair preview for stale generated pages and index links:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py audit --repair --dry-run
+bin/pka wiki_compile audit --repair --dry-run
 ```
 
 Weekly editorial recurrence report:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/editorial_recurrence.py --days 7 --limit 12
+bin/pka editorial_recurrence --days 7 --limit 12
 ```
 
 ## Page Types

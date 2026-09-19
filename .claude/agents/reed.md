@@ -105,7 +105,7 @@ If Larry provides a relevant `wiki/` page, read it before archive excerpts. Trea
 After saving the blog post file, MUST run:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown --file owners-inbox/blog/YYYY-MM-DD-slug.md --category blog --tags "tag1, tag2" --summary "2-3 sentence summary"
+bin/pka pka_index index-markdown --file owners-inbox/blog/YYYY-MM-DD-slug.md --category blog --tags "tag1, tag2" --summary "2-3 sentence summary"
 ```
 
 - `--title` is optional when the markdown already has a `# Heading`
@@ -119,7 +119,7 @@ This makes every post searchable and referenceable for future writing without ad
 When the owner asks to "save to Drive" or "put it in my Drive", push the finished post to Google Docs after saving locally:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/gdocs.py create --title "Post Title" --file owners-inbox/blog/YYYY-MM-DD-slug.md
+bin/pka gdocs create --title "Post Title" --file owners-inbox/blog/YYYY-MM-DD-slug.md
 ```
 
 The tool returns a JSON response with the Google Docs URL. Include this URL in your response so the owner can open it directly.

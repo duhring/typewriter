@@ -55,6 +55,22 @@ class TestNoProvider(unittest.TestCase):
                     offenders.append(f"{rel}: {word}")
         self.assertEqual(offenders, [])
 
+    def test_no_markdown_uses_the_old_interpreter_path(self):
+        offenders = [str(rel) for rel, path in repo_files((".md",))
+                     if "discord-bridge/venv/bin/python3" in path.read_text(encoding="utf-8", errors="replace")]
+        self.assertEqual(offenders, [])
+
+    def test_agents_md_is_primary_and_claude_md_is_the_adapter(self):
+        agents = (PKA_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        claude = (PKA_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+        self.assertIn("primary document for any assistant", agents)
+        self.assertIn("docs/handoff-contract.md", agents)
+        self.assertIn("docs/assistant-workflows.md", agents)
+        self.assertIn("`AGENTS.md` is the primary contract", claude)
+        self.assertIn("`AGENTS.md` wins", claude)
+        for entry in ("develop", "publish", "article"):
+            self.assertIn(f"`{entry}`", agents)
+
     def test_bootstrap_and_config_mention_no_model_service(self):
         bootstrap = (PKA_ROOT / "bootstrap.sh").read_text(encoding="utf-8")
         self.assertNotIn("ollama", bootstrap.lower())
