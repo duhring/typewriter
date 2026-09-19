@@ -148,7 +148,7 @@ In the nightly rhythm, keep the compiled wiki healthy without changing source-of
 3. If any repair is refused, contradiction findings appear, or source-path/KB provenance problems appear, do not force changes. Report the finding in the Dreamer report.
 4. After applied repairs, refresh retrieval:
    ```bash
-   discord-bridge/venv/bin/python3 tools/memory_retrieval.py sync
+   bin/pka memory_retrieval sync
    ```
 
 ## Wiki Compile Mode

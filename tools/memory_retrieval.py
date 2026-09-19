@@ -11,6 +11,15 @@ Indexes text from:
 - Discord note archive
 
 Then retrieves the most relevant prior context for a new request.
+
+Retrieval is keyword search: SQLite's FTS5 full-text index over the chunk
+titles and text (BM25 ranking), blended with the same recency, source, and
+intent bonuses as before. No model service and no embeddings are involved,
+so `recall` works on any machine that ran `sync`.
+
+  bin/pka memory_retrieval sync                 # refresh the chunk index (writes)
+  bin/pka memory_retrieval status
+  bin/pka memory_retrieval recall --query "..." [--limit 4] [--intent general|writing] [--format prompt|json]
 """
 
 from __future__ import annotations
@@ -18,7 +27,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import math
 import re
 import sqlite3
 import sys
@@ -26,8 +34,6 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
-
-import lmstudio
 
 
 PKA_ROOT = Path(__file__).resolve().parent.parent
@@ -125,7 +131,52 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_memory_chunks_kind ON memory_chunks(source_kind)"
     )
+    _ensure_fts(conn)
     conn.commit()
+
+
+FTS_TABLE = "memory_chunks_fts"
+
+
+def _fts_exists(conn: sqlite3.Connection) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (FTS_TABLE,)
+    ).fetchone()
+    return row is not None
+
+
+def _ensure_fts(conn: sqlite3.Connection) -> None:
+    """A full-text index over the chunks, kept in step by triggers.
+
+    External-content FTS5: the text stays in memory_chunks; the index holds
+    only the tokens. Created on first sync; rebuilt from existing rows so a
+    database indexed before this existed needs no re-sync."""
+    if _fts_exists(conn):
+        return
+    conn.execute(
+        f"""
+        CREATE VIRTUAL TABLE {FTS_TABLE} USING fts5(
+            title, text_content, content='memory_chunks', content_rowid='id', tokenize='porter unicode61'
+        )
+        """
+    )
+    conn.executescript(
+        f"""
+        CREATE TRIGGER IF NOT EXISTS memory_chunks_ai AFTER INSERT ON memory_chunks BEGIN
+            INSERT INTO {FTS_TABLE}(rowid, title, text_content) VALUES (new.id, new.title, new.text_content);
+        END;
+        CREATE TRIGGER IF NOT EXISTS memory_chunks_ad AFTER DELETE ON memory_chunks BEGIN
+            INSERT INTO {FTS_TABLE}({FTS_TABLE}, rowid, title, text_content)
+                VALUES ('delete', old.id, old.title, old.text_content);
+        END;
+        CREATE TRIGGER IF NOT EXISTS memory_chunks_au AFTER UPDATE ON memory_chunks BEGIN
+            INSERT INTO {FTS_TABLE}({FTS_TABLE}, rowid, title, text_content)
+                VALUES ('delete', old.id, old.title, old.text_content);
+            INSERT INTO {FTS_TABLE}(rowid, title, text_content) VALUES (new.id, new.title, new.text_content);
+        END;
+        """
+    )
+    conn.execute(f"INSERT INTO {FTS_TABLE}({FTS_TABLE}) VALUES ('rebuild')")
 
 
 def _normalize_space(text: str) -> str:
@@ -507,10 +558,8 @@ def collect_chunks(conn: sqlite3.Connection) -> list[Chunk]:
 def sync_memory(conn: sqlite3.Connection) -> dict[str, int]:
     _ensure_schema(conn)
     existing = {
-        row[0]: (row[1], row[2] or "")
-        for row in conn.execute(
-            "SELECT source_key, content_hash, embedding_json FROM memory_chunks"
-        )
+        row[0]: row[1]
+        for row in conn.execute("SELECT source_key, content_hash FROM memory_chunks")
     }
 
     all_chunks = collect_chunks(conn)
@@ -519,49 +568,35 @@ def sync_memory(conn: sqlite3.Connection) -> dict[str, int]:
     unchanged = 0
 
     for chunk in all_chunks:
-        current = existing.get(chunk.source_key)
-        if current and current[0] == chunk.content_hash and current[1]:
+        if existing.get(chunk.source_key) == chunk.content_hash:
             unchanged += 1
             continue
         pending.append(chunk)
 
-    if pending:
-        vectors = lmstudio.embed_texts(chunk.text_content for chunk in pending)
-        for chunk, vector in zip(pending, vectors):
-            conn.execute(
-                """
-                INSERT INTO memory_chunks (
-                    source_kind, source_group, source_key, chunk_index, title,
-                    text_content, source_path, metadata_json, content_hash,
-                    embedding_json, updated_at
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(source_key) DO UPDATE SET
-                    source_kind=excluded.source_kind,
-                    source_group=excluded.source_group,
-                    chunk_index=excluded.chunk_index,
-                    title=excluded.title,
-                    text_content=excluded.text_content,
-                    source_path=excluded.source_path,
-                    metadata_json=excluded.metadata_json,
-                    content_hash=excluded.content_hash,
-                    embedding_json=excluded.embedding_json,
-                    updated_at=excluded.updated_at
-                """,
-                (
-                    chunk.source_kind,
-                    chunk.source_group,
-                    chunk.source_key,
-                    chunk.chunk_index,
-                    chunk.title,
-                    chunk.text_content,
-                    chunk.source_path,
-                    chunk.metadata_json,
-                    chunk.content_hash,
-                    json.dumps(vector),
-                    _utc_now(),
-                ),
+    for chunk in pending:
+        conn.execute(
+            """
+            INSERT INTO memory_chunks (
+                source_kind, source_group, source_key, chunk_index, title,
+                text_content, source_path, metadata_json, content_hash, updated_at
             )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(source_key) DO UPDATE SET
+                source_kind=excluded.source_kind,
+                source_group=excluded.source_group,
+                chunk_index=excluded.chunk_index,
+                title=excluded.title,
+                text_content=excluded.text_content,
+                source_path=excluded.source_path,
+                metadata_json=excluded.metadata_json,
+                content_hash=excluded.content_hash,
+                updated_at=excluded.updated_at
+            """,
+            (
+                chunk.source_kind, chunk.source_group, chunk.source_key, chunk.chunk_index, chunk.title,
+                chunk.text_content, chunk.source_path, chunk.metadata_json, chunk.content_hash, _utc_now(),
+            ),
+        )
 
     stale_keys = [key for key in existing.keys() if key not in seen_keys]
     if stale_keys:
@@ -580,12 +615,32 @@ def sync_memory(conn: sqlite3.Connection) -> dict[str, int]:
     }
 
 
-def _cosine_similarity(left: list[float], right: list[float]) -> float:
-    left_norm = math.sqrt(sum(value * value for value in left))
-    right_norm = math.sqrt(sum(value * value for value in right))
-    if left_norm == 0 or right_norm == 0:
-        return 0.0
-    return sum(a * b for a, b in zip(left, right)) / (left_norm * right_norm)
+def _fts_query(query: str) -> str:
+    """An FTS5 MATCH expression: every meaningful token, any of them may hit."""
+    tokens = sorted(_tokenize(query))
+    return " OR ".join(f'"{token}"' for token in tokens)
+
+
+def _fts_candidates(conn: sqlite3.Connection, query: str, limit: int = 200) -> list[tuple]:
+    """Rows ranked by BM25, best first, with a relevance in [0, 1]."""
+    match = _fts_query(query)
+    if not match or not _fts_exists(conn):
+        return []
+    rows = conn.execute(
+        f"""
+        SELECT c.source_kind, c.source_group, c.source_key, c.title, c.text_content, c.source_path,
+               c.metadata_json, bm25({FTS_TABLE}) AS rank
+        FROM {FTS_TABLE} JOIN memory_chunks AS c ON c.id = {FTS_TABLE}.rowid
+        WHERE {FTS_TABLE} MATCH ?
+        ORDER BY rank LIMIT ?
+        """,
+        (match, limit),
+    ).fetchall()
+    if not rows:
+        return []
+    # bm25() is negative and lower is better; scale to [0, 1] within this result set.
+    best = -rows[0][-1] or 1.0
+    return [(*row[:-1], max(0.0, -row[-1]) / best) for row in rows]
 
 
 def _keyword_overlap(query: str, text: str) -> float:
@@ -680,28 +735,31 @@ def _intent_bonus(source_kind: str, metadata: dict, intent: str) -> float:
 
 
 def recall(conn: sqlite3.Connection, query: str, *, limit: int = 4, intent: str = "general") -> list[dict]:
-    _ensure_schema(conn)
-    sync_memory(conn)
-
-    rows = conn.execute(
-        """
-        SELECT source_kind, source_group, source_key, title, text_content, source_path, metadata_json, embedding_json
-        FROM memory_chunks
-        WHERE embedding_json IS NOT NULL
-        """
-    ).fetchall()
+    """Keyword recall over the synced chunks. Read-only: run `sync` to refresh the index."""
+    rows = _fts_candidates(conn, query)
+    if not rows:
+        # Nothing matched (or the query was only stopwords): fall back to a
+        # bounded keyword-overlap scan so recall still answers.
+        rows = [
+            (*row, 0.0)
+            for row in conn.execute(
+                """
+                SELECT source_kind, source_group, source_key, title, text_content, source_path, metadata_json
+                FROM memory_chunks ORDER BY updated_at DESC LIMIT 400
+                """
+            ).fetchall()
+        ]
     if not rows:
         return []
 
-    query_vector = lmstudio.embed_texts([query])[0]
     candidates: list[dict] = []
-    for source_kind, source_group, source_key, title, text_content, source_path, metadata_json, embedding_json in rows:
+    for source_kind, source_group, source_key, title, text_content, source_path, metadata_json, relevance in rows:
         metadata = json.loads(metadata_json or "{}")
-        vector = json.loads(embedding_json)
-        semantic = _cosine_similarity(query_vector, vector)
         lexical = _keyword_overlap(query, f"{title}\n{text_content}")
+        if relevance == 0.0 and lexical == 0.0:
+            continue
         score = (
-            (semantic * 0.78)
+            (relevance * 0.78)
             + (lexical * 0.14)
             + _recency_bonus(metadata)
             + _source_bonus(source_kind)
@@ -785,7 +843,6 @@ def format_prompt_block(hits: list[dict], *, intent: str = "general") -> str:
 
 
 def status(conn: sqlite3.Connection) -> dict:
-    _ensure_schema(conn)
     total = conn.execute("SELECT COUNT(*) FROM memory_chunks").fetchone()[0]
     by_kind = {
         row[0]: row[1]
@@ -798,10 +855,12 @@ def status(conn: sqlite3.Connection) -> dict:
         "total_chunks": total,
         "by_kind": by_kind,
         "last_updated": last_updated,
+        "retrieval": "keyword (FTS5, BM25)",
+        "fts_index": _fts_exists(conn),
     }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Retrieve prior context from PKA memory")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -824,7 +883,7 @@ def main() -> int:
         help="Output format",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     query = getattr(args, "query", None)
     if args.command == "recall" and query is None:
         query = sys.stdin.read().strip()
@@ -847,9 +906,6 @@ def main() -> int:
             else:
                 print(format_prompt_block(hits, intent=args.intent))
             return 0
-    except lmstudio.LMStudioError as exc:
-        print(f"Local memory retrieval could not reach LM Studio: {exc}", file=sys.stderr)
-        return 1
     finally:
         if "conn" in locals():
             conn.close()
