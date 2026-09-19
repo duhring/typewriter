@@ -10,7 +10,6 @@
   "platform": { "os": "macOS", "arch": "arm64" },
   "services": {
     "discord_bridge": { "enabled": false, "path": "discord-bridge/bot.py", "channel_env": "LARRY_CHANNEL_ID" },
-    "ollama": { "enabled": false, "model": "gemma4:latest" },
     "viewer": { "enabled": true, "path": "viewer.html" }
   },
   "discord_channels": { "larry": null, "machine_status": null, "artifacts": null },

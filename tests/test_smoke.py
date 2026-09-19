@@ -27,8 +27,6 @@ class TestImports(unittest.TestCase):
         "pka_index",
         "records",
         "task_record",
-        "llm",
-        "glm",
         "machine_role",
         "cuecam",
         "wiki_compile",
@@ -70,13 +68,6 @@ class TestPipelineHelpers(unittest.TestCase):
 
         for header in pipeline.REQUIRED_HEADERS:
             self.assertIn(header, pipeline.PACKAGE_INSTRUCTIONS)
-
-
-class TestLLMRouter(unittest.TestCase):
-    def test_glm_registered(self):
-        import llm
-
-        self.assertIn("glm", llm.SUPPORTED_PROVIDERS)
 
 
 class TestMachineRoleGuard(unittest.TestCase):

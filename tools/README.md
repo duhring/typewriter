@@ -39,7 +39,6 @@ One line per tool, grouped by domain. Run everything with `discord-bridge/venv/b
 | `wiki_compile.py` | Compile durable source material into wiki pages |
 | `editorial_recurrence.py` | Find recurring editorial signals in recent artifacts (Dreamer input) |
 | `balance_check.py` | Pre-record check of an outline against the archive: retread risk, contradictions, brand drift |
-| `promote_sop.py` | Promote archive learnings into candidate SOP/playbook updates |
 | `notebooklm.py` | NotebookLM Q&A with citation receipts |
 
 ## Records, tasks, session orientation
@@ -66,8 +65,6 @@ One line per tool, grouped by domain. Run everything with `discord-bridge/venv/b
 | Tool | Purpose |
 |---|---|
 | `llm.py` | Provider router (use this, not the helpers directly) |
-| `glm.py` / `xai.py` / `lmstudio.py` | GLM, Grok, and local LM Studio helpers with usage logging |
-| `rotate_glm_key.py` | Install `GLM_API_KEY` from the clipboard and select GLM as the default provider |
 
 
 ## Ops, health, comms

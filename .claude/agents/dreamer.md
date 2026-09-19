@@ -130,7 +130,7 @@ Bias toward one small, durable improvement backed by repeated evidence, not a lo
 Start the weekly editorial pass with:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/editorial_recurrence.py --days 7 --limit 12
+bin/pka editorial_recurrence.py --days 7 --limit 12
 ```
 
 Use the report to identify repeated topics, people, and projects across recent blogs, YouTube packages, transcripts, presentations, research notes, and journal entries. Refresh existing wiki pages for strong recurrences; leave weak one-off signals on the watch list until they recur across multiple cycles.
@@ -139,11 +139,11 @@ In the nightly rhythm, keep the compiled wiki healthy without changing source-of
 
 1. Preview safe wiki repairs:
    ```bash
-   discord-bridge/venv/bin/python3 tools/wiki_compile.py audit --repair --dry-run
+   bin/pka wiki_compile.py audit --repair --dry-run
    ```
 2. If the preview only plans safe generated-page refreshes or index rebuilds, apply them:
    ```bash
-   discord-bridge/venv/bin/python3 tools/wiki_compile.py audit --repair
+   bin/pka wiki_compile.py audit --repair
    ```
 3. If any repair is refused, contradiction findings appear, or source-path/KB provenance problems appear, do not force changes. Report the finding in the Dreamer report.
 4. After applied repairs, refresh retrieval:
@@ -168,26 +168,26 @@ Use primary sources, not existing wiki pages, as evidence:
 For project pages, prefer the compiler tool:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py projects --project "Project Name"
+bin/pka wiki_compile.py projects --project "Project Name"
 ```
 
 To refresh every project page:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py projects --all
+bin/pka wiki_compile.py projects --all
 ```
 
 For concept pages, use:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py concepts --concept "hybrid-context-layer"
-discord-bridge/venv/bin/python3 tools/wiki_compile.py concepts --all
+bin/pka wiki_compile.py concepts --concept "hybrid-context-layer"
+bin/pka wiki_compile.py concepts --all
 ```
 
 For stale-context and contradiction detection, use:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py audit
+bin/pka wiki_compile.py audit
 ```
 
 ### 2. Choose Page Targets
@@ -267,11 +267,7 @@ When Larry invokes Dreamer with "SOP promotion", "archive-to-SOP", "promote lear
 
 Run:
 
-```bash
-discord-bridge/venv/bin/python3 tools/promote_sop.py report --days 14 --limit 14
-```
-
-This reviews recent session logs, meeting extracts, transcript extracts, blogs, YouTube packages, research notes, and other owner-facing markdown deliverables.
+SOP promotion is not in this starter release. Review recent session logs, meeting extracts, transcript extracts, blogs, YouTube packages, research notes, and other owner-facing markdown deliverables yourself and draft candidate playbook updates from them.
 
 ### 2. Review the Report
 

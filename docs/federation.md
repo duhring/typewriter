@@ -56,11 +56,7 @@ Video pipelines may be updated on any peer and shared with the others.
 
 ## 6. LLM access
 
-Each machine may use any combination of LLM frontends and providers. There is no central LLM policy.
-
-- **Interactive frontends** (OpenWorker, Antigravity, Claude app, ChatGPT app, Cursor, etc.) can read and write the PKA markdown corpus directly — it's just files on disk. Point them at the repo root.
-- **API calls from tools** route through `tools/llm.py` (`LLM_PROVIDER` env var; providers: `xai`, `lmstudio`, with `anthropic`/`openai` adapters available to add). Per-provider keys live in the environment or `.env`, never in git.
-- See `docs/larry/llm-providers.md` (where present) for the provider catalog.
+Each machine's owner works with whatever AI assistant they choose; there is no central model policy and PKA's tools call no model API. Editorial work is handed to the assistant as request files and taken back as response files (`docs/handoff-contract.md`); only the assistant's own account is involved, and no model key lives in the repo or its environment.
 
 ## 7. Discord
 

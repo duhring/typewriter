@@ -23,8 +23,8 @@ Read this file when you need operational detail about inbox handling, database e
 - Attachments are saved alongside with timestamp prefixes
 - Check this folder at session start just like the main team inbox
 - Process mobile notes as journal entries, to-dos, knowledge items, or whatever fits the content
-- For outbound delivery back to Discord, use `discord-bridge/venv/bin/python3 tools/discord_send.py`
-- To send a file, use `discord-bridge/venv/bin/python3 tools/discord_send.py "Optional caption" --attach /absolute/path/to/file`
+- For outbound delivery back to Discord, use `bin/pka discord_send.py`
+- To send a file, use `bin/pka discord_send.py "Optional caption" --attach /absolute/path/to/file`
 - Directory attachments are supported too; `tools/discord_send.py` will zip folders like `.cuecam` bundles automatically before upload
 - `close chat`, `close session`, `session close`, or `!close` should end the active Discord chat session, save a concise closeout report plus a fuller session archive to `owners-inbox/session-logs/`, and reset the active session
 
@@ -37,7 +37,7 @@ Use `tools/task_record.py` to maintain that record and keep the `projects` table
 Preferred command:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/task_record.py upsert --name "Task Name" --summary "What this effort is about" --status active --priority high --focus "Current focus item" --artifact owners-inbox/example.md --open-loop "Next unresolved step"
+bin/pka task_record.py upsert --name "Task Name" --summary "What this effort is about" --status active --priority high --focus "Current focus item" --artifact owners-inbox/example.md --open-loop "Next unresolved step"
 ```
 
 `upsert` remains the creation and additive-history path. Once a task has an
@@ -45,7 +45,7 @@ authoritative checkpoint, do not append more `--focus` bullets. Replace the
 current control block atomically:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/task_record.py checkpoint \
+bin/pka task_record.py checkpoint \
   --name "Task Name" --phase implementation --status active --owner Sable \
   --objective "One governing outcome" --now "One action happening now" \
   --next "One action that follows" --acceptance "The verification command passes"
@@ -54,7 +54,7 @@ discord-bridge/venv/bin/python3 tools/task_record.py checkpoint \
 Move a completed loop out of active state without erasing its history:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/task_record.py resolve-loop \
+bin/pka task_record.py resolve-loop \
   --name "Task Name" --loop "Uniquely identifying text" \
   --resolution "How or why it was resolved"
 ```
@@ -63,7 +63,7 @@ Record an approach—especially a failed or inconclusive one—with the reason s
 a later session does not rediscover the same dead end:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/task_record.py record-attempt \
+bin/pka task_record.py record-attempt \
   --name "Task Name" --result failed --approach "What was tried" \
   --outcome "What happened" --reason "Why it failed"
 ```
@@ -71,7 +71,7 @@ discord-bridge/venv/bin/python3 tools/task_record.py record-attempt \
 Audit every task record without writing files or the database:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/task_record.py audit --stale-days 30
+bin/pka task_record.py audit --stale-days 30
 ```
 
 What belongs in the canonical task record:
@@ -119,15 +119,15 @@ The `wiki/` directory is PKA's compiled context layer.
 Preferred project compiler commands:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/wiki_compile.py projects --project "PKA System"
-discord-bridge/venv/bin/python3 tools/wiki_compile.py projects --all
-discord-bridge/venv/bin/python3 tools/wiki_compile.py concepts --concept "hybrid-context-layer"
-discord-bridge/venv/bin/python3 tools/wiki_compile.py concepts --all
-discord-bridge/venv/bin/python3 tools/wiki_compile.py people --all
-discord-bridge/venv/bin/python3 tools/wiki_compile.py pipeline
-discord-bridge/venv/bin/python3 tools/wiki_compile.py audit
-discord-bridge/venv/bin/python3 tools/wiki_compile.py audit --repair --dry-run
-discord-bridge/venv/bin/python3 tools/editorial_recurrence.py --days 7 --limit 12
+bin/pka wiki_compile.py projects --project "PKA System"
+bin/pka wiki_compile.py projects --all
+bin/pka wiki_compile.py concepts --concept "hybrid-context-layer"
+bin/pka wiki_compile.py concepts --all
+bin/pka wiki_compile.py people --all
+bin/pka wiki_compile.py pipeline
+bin/pka wiki_compile.py audit
+bin/pka wiki_compile.py audit --repair --dry-run
+bin/pka editorial_recurrence.py --days 7 --limit 12
 ```
 
 The compiler reads project rows, canonical task records, matching KB entries, and recent journal signals. It writes project pages to `wiki/projects/`, concept pages to `wiki/concepts/`, updates `wiki/index.md`, creates cautious `kb_links`, and saves indexed Dreamer reports to `owners-inbox/`. Generated Dreamer and wiki artifacts are excluded from primary evidence selection. The audit command updates `wiki/stale-review.md`, `wiki/contradictions.md`, and an indexed audit report.
@@ -160,13 +160,13 @@ Phase-1 rule:
 Preferred command for governed registration:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/records.py upsert --title "Record Title" --record-class financial-statement --series taxes-2025 --event-date 2025-12-31 --verification-status confirmed --retention-class 7-years --state reference --sensitivity confidential --source-path owners-inbox/example.md
+bin/pka records.py upsert --title "Record Title" --record-class financial-statement --series taxes-2025 --event-date 2025-12-31 --verification-status confirmed --retention-class 7-years --state reference --sensitivity confidential --source-path owners-inbox/example.md
 ```
 
 For markdown artifacts that should be both indexed and registered, prefer:
 
 ```bash
-discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown --file owners-inbox/example.md --category finance --record-class financial-statement --record-series taxes-2025
+bin/pka pka_index.py index-markdown --file owners-inbox/example.md --category finance --record-class financial-statement --record-series taxes-2025
 ```
 
 ## Viewer
@@ -182,7 +182,7 @@ The knowledge base should compound over time.
 1. Before research, include topic keywords when delegating to Pax so Pax checks the KB first
 2. For any durable markdown deliverable saved to `owners-inbox/`, treat indexing as part of the definition of done
 3. After any deliverable, verify a `knowledge_base` row exists with title, summary content, category, tags, and source file
-   Use `discord-bridge/venv/bin/python3 tools/pka_index.py index-markdown --file <path> --category <category> [--tags ...] [--summary ...]` for ordinary markdown deliverables instead of ad hoc SQL
+   Use `bin/pka pka_index.py index-markdown --file <path> --category <category> [--tags ...] [--summary ...]` for ordinary markdown deliverables instead of ad hoc SQL
 4. After journaling, if a journal entry mentions a topic already in `knowledge_base`, insert a `kb_links` row connecting them
 5. During Monday morning briefs, suggest Dreamer's KB lint or cleanup mode if knowledge drift seems likely
 
@@ -336,7 +336,7 @@ For transcript-driven writing and YouTube packaging, treat the structured extrac
 
 The archive should not only store work. It should improve the operating docs over time.
 
-Use `tools/promote_sop.py` when you want to turn recent session logs, extracts, blogs, YouTube packages, research notes, and other owner-facing markdown into candidate SOP or playbook updates.
+SOP promotion (turning session logs, extracts, and other owner-facing markdown into candidate playbook updates) is not in this starter release; when it returns it will take the same request-and-response handoff shape as the other editorial stages (`docs/handoff-contract.md`).
 
 This is the right move when:
 
@@ -346,9 +346,6 @@ This is the right move when:
 
 Dreamer owns this loop. Preferred command:
 
-```bash
-discord-bridge/venv/bin/python3 tools/promote_sop.py report --days 14 --limit 14
-```
 
 The output should land in `owners-inbox/sop-promotions/` and be indexed so later refinement work can build on it.
 
@@ -423,7 +420,7 @@ Execute silently before the first substantive response — do not announce or as
 
 1. Read `USER.md` from the memory directory — current priorities, style, active context
 2. Scan `MEMORY.md` — open loops, project states, behavioral rules
-3. Run `discord-bridge/venv/bin/python3 tools/session_orient.py` (or check `owners-inbox/tasks/` for active canonical task records and `team-inbox/discord/` for unprocessed notes)
+3. Run `bin/pka session_orient.py` (or check `owners-inbox/tasks/` for active canonical task records and `team-inbox/discord/` for unprocessed notes)
 4. If any open loop from a prior session is directly relevant to the first message, surface it briefly before proceeding
 
 ## Session End Checklist
@@ -454,7 +451,7 @@ During the weekly pass:
 
 1. Review recent session logs and task records for repeated friction or unfinished operating loops
    Compare the session-log dates to recent owner-facing artifacts in `owners-inbox/`; if meaningful work continued but closeout logs stopped, treat that as an operating gap to surface or repair.
-2. Run the health doctor — `discord-bridge/venv/bin/python3 tools/pka_health.py` — as the machine-checkable definition of done. It checks git/secret hygiene, `knowledge_base.source_file` ↔ `files.filepath` integrity, durable `owners-inbox/` markdown indexing coverage, wiki staleness, category conformance, and Discord inbox state. Exit code 0 means clean; anything else needs attention. Use `--json` for structured output.
+2. Run the health doctor — `bin/pka pka_health.py` — as the machine-checkable definition of done. It checks git/secret hygiene, `knowledge_base.source_file` ↔ `files.filepath` integrity, durable `owners-inbox/` markdown indexing coverage, wiki staleness, category conformance, and Discord inbox state. Exit code 0 means clean; anything else needs attention. Use `--json` for structured output.
    Health findings receive stable fingerprints and are counted at most once
    per day. On the third consecutive daily finding, the morning brief surfaces
    one consolidated blocking item until the check becomes clean or the owner

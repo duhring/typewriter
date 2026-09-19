@@ -36,7 +36,6 @@ Any assistant that can read files and run commands uses the same launcher. No mo
 | Node (HyperFrames, optional) | HTML-based video renders, captions, TTS; tools call `npx --yes hyperframes`. None of the three core paths need it | `Brewfile` installs node |
 | CueCam Presenter | Presenting and recording a deck; live control needs Accessibility and Screen Recording permission. Bundles build without it | https://cuecam.app |
 | Discord bot (optional) | Chat front-end to the orchestrator | `discord-bridge/README.md` |
-| Ollama or LM Studio (optional) | Local models for retrieval and drafts | `docs/larry/llm-providers.md` |
 
 ## Layout
 
