@@ -4,6 +4,8 @@ A portable copy of the Personal Knowledge Assistance (PKA) machinery: the tools,
 
 Runs on macOS (Apple Silicon or Intel) with any AI assistant that can read files and run commands ([Claude Code](https://claude.com/claude-code), Codex, or another). Everything durable is Markdown files, one local SQLite database, and the CLIs in `tools/`.
 
+What If AI Interviewed You for Your Talk?
+https://youtu.be/nkq5IdTT2FY
 ## Install
 
 ```bash
