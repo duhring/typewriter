@@ -109,3 +109,8 @@ Clone on each Mac, run `bootstrap.sh` on each, and push and pull through git. Fi
 - Write `owners-inbox/brand-system.md`. Maven and Reed draft against it.
 - Tools resolve the repo root from their own location. Paths you may want to override are `PKA_RECORDINGS_DIR`, `PKA_VIDEO_STUDIO`, and `PKA_BACKUP_DIR` in `.env`.
 - Add a tool: drop a script in `tools/`, give it a docstring, add a line to `tools/README.md`.
+
+- ## More Reference
+
+- On Substack: https://johnduhring.substack.com/p/built-for-you
+- On YouTube: https://youtu.be/ET9Vc8mj8Wk
