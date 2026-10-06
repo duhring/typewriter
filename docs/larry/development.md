@@ -52,6 +52,13 @@ Rules:
 
 ## Stage 2 — Challenge Gate
 
+For a first-time user with no prior published work, the interview establishes
+the baseline. Skip historical retread and contradiction checks; do not request
+past claims or block drafting because history is empty. Continue the source
+quote and context reviews, then create the written piece or presentation from
+the cleared claims. Internal notes, wiki pages, and third-party transcripts do
+not count as the owner's published history.
+
 Challenge the material *before* it is assembled, so the outline is built only from claims that survived. Producing first and challenging last (Vera at the end) means weak material is already load-bearing by the time anyone objects; this stage moves the kill-step upstream. It is the editorial sibling of the video-studio project room, which already gates on source authority before authoring.
 
 The editorial judgment is the assistant's; PKA prepares, verifies, records, and never approves. The gate is three handoffs (`docs/handoff-contract.md`). Each `import` validates the response and prepares the next request, so the loop is: run the command, read the request file it names, write the response file beside it, run the next import.
