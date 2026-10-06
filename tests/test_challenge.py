@@ -476,10 +476,10 @@ class TestResolutionAndHistory(unittest.TestCase):
         self.assertIn("failed", reg["runs"][-1]["note"])
 
         stripped_before = [
-            {k: v for k, v in c.items() if k != "retread"} for c in json.loads(before)
+            {k: v for k, v in c.items() if k not in ("retread", "history_status")} for c in json.loads(before)
         ]
         stripped_after = [
-            {k: v for k, v in c.items() if k != "retread"} for c in reg["claims"]
+            {k: v for k, v in c.items() if k not in ("retread", "history_status")} for c in reg["claims"]
         ]
         self.assertEqual(stripped_before, stripped_after)
 
@@ -661,6 +661,45 @@ class TestStageFlow(unittest.TestCase):
         }), encoding="utf-8")
         return request
 
+    def test_first_interview_can_proceed_without_published_history(self):
+        # An empty install and an install containing only internal/third-party
+        # records both lack eligible history. Neither requires past claims.
+        for passages in ([], [make_passage("notes/a.md", self.SOURCE, authority=cc.INTERNAL)]):
+            with self.subTest(passages=len(passages)):
+                self.dir = Path(self.tmp.name) / f"first-run-{len(passages)}"
+                self.dir.mkdir()
+                self.source = self.dir / "interview.md"
+                self.source.write_text(self.SOURCE, encoding="utf-8")
+                challenge.load_corpus.return_value = cc.Corpus(passages)
+                self.assertEqual(self.run_cli("extract", "prepare", "--source", str(self.source))[0], 0)
+                self.respond(challenge.STAGE_EXTRACT, [
+                    {"id": "a", "window": 1, "claim": "Anyone can use the system",
+                     "support_quote": "Anyone can use the system today"},
+                ])
+                self.assertEqual(self.run_cli("extract", "import")[0], 0)
+                req = self.handoff.load_request(self.dir / f"{challenge.STAGE_VERDICTS}.request.json")
+                self.assertIn("NO PUBLISHED HISTORY AVAILABLE", req.data["payload"]["batches"][0]["text"])
+                self.assertIn("must never require the owner to supply past work", req.data["instructions"])
+                self.respond(challenge.STAGE_VERDICTS, [
+                    {"id": "c1", "verdict": "survives", "rationale": "Supported in this interview",
+                     "needs": "", "contradiction": None},
+                ])
+                self.assertEqual(self.run_cli("verdicts", "import")[0], 0)
+                # Source-context validation remains required even without history.
+                self.assertEqual(self.run_cli("status")[1]["cleared"], 0)
+                self.respond(challenge.STAGE_CONTEXT, [
+                    {"id": "c1", "claim_valid": True, "verdict": "survives",
+                     "rationale": "Owner endorses the claim", "needs": "",
+                     "contradiction_valid": False},
+                ])
+                code, out = self.run_cli("context-review", "import")
+                self.assertEqual(code, 0, out)
+                self.assertEqual(out["cleared"], 1)
+                self.assertEqual(out["needs_resolution"], 0)
+                status = self.run_cli("status")[1]
+                self.assertIn("proceed to the written piece or presentation", status["next"])
+                self.assertIn("No published history is available", (self.dir / "challenge.md").read_text())
+
     def test_full_run(self):
         # Stage 1: prepare, answer, import.
         code, out = self.run_cli("extract", "prepare", "--source", str(self.source))
@@ -746,7 +785,7 @@ class TestStageFlow(unittest.TestCase):
 
         code, out = self.run_cli("status")
         self.assertTrue(all(s["applied"] for s in out["stages"]))
-        self.assertIn("owner resolution", out["next"])
+        self.assertIn("context-review prepare", out["next"])
 
         # The owner edits the register: a revised review against the old request is stale.
         register["claims"][4]["owner_override"] = challenge.SURVIVES

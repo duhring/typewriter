@@ -99,7 +99,7 @@ from challenge_corpus import (  # noqa: E402
 DEVELOPMENT_DIR = PKA_ROOT / "owners-inbox" / "development"
 
 # Bump when any stage's instructions change, so run history stays interpretable.
-PROMPT_VERSION = "2026-09-18.1"
+PROMPT_VERSION = "2026-10-06.1"
 
 STAGE_EXTRACT = "challenge.extract-claims"
 STAGE_VERDICTS = "challenge.verdicts"
@@ -376,7 +376,9 @@ def build_claims(raw_claims: list[dict], source_text: str) -> list[dict]:
 
 def attach_evidence(claims: list[dict], corpus: Corpus) -> None:
     """Passage-level retrieval. Every hit carries its own excerpt."""
+    published = sum(corpus.tier_counts().get(tier, 0) for tier in RETREAD_TIERS)
     for c in claims:
+        c["history_status"] = "available" if published else "no_history"
         query = f"{c.get('claim','')} {c.get('support_quote','')}"
         c["retread"] = corpus.search(query, tiers=RETREAD_TIERS, top=PASSAGES_PER_CLAIM)
 
@@ -416,7 +418,9 @@ def render_batch(batch: list[dict]) -> str:
         if c.get("support_quote"):
             lines.append(f"Owner's words: \"{c['support_quote']}\"")
         hits = c.get("retread") or []
-        if not hits:
+        if c.get("history_status") == "no_history":
+            lines.append("Prior published work: NO PUBLISHED HISTORY AVAILABLE (first-run baseline).")
+        elif not hits:
             lines.append("Prior published work: NO MEANINGFUL OVERLAP FOUND.")
         else:
             lines.append("Prior published work (John's own; each excerpt is the matched passage):")
@@ -442,6 +446,12 @@ and the matching passages from the owner's PRIOR PUBLISHED work. Every overlap
 label comes with the actual passage it refers to — judge from the passage, not
 the label. "NO MEANINGFUL OVERLAP FOUND" means the archive was searched and
 nothing relevant was found; treat it as fresh ground, not as missing information.
+"NO PUBLISHED HISTORY AVAILABLE" means there is no eligible published archive.
+Skip historical retread and contradiction checks in that case. Missing history
+is not a weakness and must never require the owner to supply past work. Judge
+the claim from the current interview: specific, faithfully supported claims can
+survive and proceed to the written piece or presentation. Still flag genuine
+unsupported claims and extraction errors; do not invent historical evidence.
 
 Write one item per claim id, every id exactly once:
   {{"id": "<claim id>",
@@ -1001,6 +1011,14 @@ def build_report(register: dict, corpus: Corpus, note: str) -> str:
         "",
     ]
 
+    if not tiers.get("published", 0):
+        lines += [
+            "No published history is available. This interview establishes the baseline; "
+            "historical retread and contradiction checks do not apply. Missing history "
+            "does not prevent drafting from claims cleared by the source-context review.",
+            "",
+        ]
+
     if pending:
         lines += [
             "> The outline is built from *resolved* survivors. "
@@ -1148,7 +1166,15 @@ def stage_status(directory: Path) -> dict:
             next_action = f"write {entry['stage']}.response.json, then {name} import" if not entry["response"] else f"{name} import"
             break
     else:
-        next_action = "owner resolution: set owner_override in claims.json, then `verdicts prepare` to re-challenge"
+        state = summary(read_register(directory))
+        if state["needs_resolution"]:
+            next_action = "owner resolution: set owner_override in claims.json, then `verdicts prepare` to re-challenge"
+        elif state["internal_review"]:
+            next_action = "context-review prepare: resolve held source-context checks"
+        elif state["cleared"]:
+            next_action = "proceed to the written piece or presentation using cleared claims"
+        else:
+            next_action = "no cleared claims: revise the interview before drafting"
     result = {"directory": str(directory), "stages": stages, "next": next_action}
     if (directory / "claims.json").exists():
         result.update(summary(read_register(directory)))
