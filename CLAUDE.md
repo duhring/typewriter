@@ -38,7 +38,7 @@ Load only the matching procedure:
 | Journal, contact, glossary | Larry | `docs/larry/journaling.md` |
 | Calendar, morning brief, Docs, Sheets, Maps | Larry | `docs/larry/google-tools.md` |
 | Records, retention, task tracking | Larry | `docs/larry/records.md`; use `operations.md` for broader context |
-| Video development/interview/outline (develop entry) | Larry | `docs/assistant-workflows.md`, `docs/larry/development.md` |
+| Video development/interview/first-mile menu (develop entry) | Larry | `docs/assistant-workflows.md`, `docs/larry/development.md` |
 | Video production, publish entry | Larry | `docs/assistant-workflows.md`, `docs/larry/video-production.md` |
 | CueCam or recording intake | Larry | `docs/larry/cuecam.md` |
 | Watch or visually analyze video | Larry | `docs/larry/video-watching.md` |

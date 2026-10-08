@@ -161,7 +161,7 @@ command -v ffmpeg >/dev/null && ok "ffmpeg found" \
 command -v yt-dlp >/dev/null && ok "yt-dlp found" \
   || warn "yt-dlp not found: transcript fallback for YouTube sources on the article path."
 [ -d "/Applications/CueCam Presenter.app" ] && ok "CueCam Presenter installed" \
-  || warn "CueCam Presenter not installed: needed to present and record a deck (https://cuecam.app). Bundles still build without it."
+  || warn "CueCam Presenter not installed: needed to present and record a deck (https://cuecam-presenter.com). Bundles still build without it."
 if [ "$WITH_TRANSCRIBE" = 1 ]; then ok "local Whisper installed (transcribes local video files)"; else
   echo "  - local Whisper not installed: re-run with --with-transcribe if you will transcribe local video files. YouTube captions and supplied transcripts need nothing."
 fi

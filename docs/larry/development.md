@@ -50,6 +50,20 @@ Rules:
 - Close by reading back the owner's position in 2–3 sentences and getting a confirm.
 - Save the full Q&A to `interview.md` with a frontmatter block (`category: development-interview`, date, slug, tags).
 
+## Stage 1b — The First-Mile Experience: The Artifact Menu
+
+For a new user or a new topic, jumping straight from an interview into a camera recording or full deck often triggers "camera dread" and friction. Rather than forcing an immediate performance, offer the **First-Mile Artifact Menu**—a choice of five concrete starting mirrors to react to:
+
+1. **Visual Storyboard** (`storyboard.md` / image grid): A 5-panel narrative arc mapping how the ideas look visually.
+2. **Evocative Concept Image** (`concept-art.md` / artwork): A provocative visual metaphor capturing the core tension or human element.
+3. **Structured Brief** (`brief.md`): Core thesis, key assertions, audience takeaways, and empowerment promise.
+4. **CueCam Presenter Deck** (`.cuecam` bundle via `bin/pka cuecam compose`): A presentation deck ready for recording. Provide the direct download link to [CueCam Presenter](https://cuecam-presenter.com) so the user can install the app when ready.
+5. **Article Draft Seed** (`blog-draft.md`): A text-first draft for creators who think and iterate better through written words.
+
+Present the menu to the user: *"Here are 5 ways to mirror your thoughts back to you. Which would you like to explore first?"*
+
+Reacting to a concrete surrogate mirror unlocks creative momentum without stage fright. Once the user is energized and the core claims are confirmed, proceed through the Challenge Gate and Outline stages.
+
 ## Stage 2 — Challenge Gate
 
 For a first-time user with no prior published work, the interview establishes

@@ -57,3 +57,6 @@ tools/*_usage.jsonl
 .claude/worktrees/
 tmp/
 .obsidian/workspace.json
+
+# Auto-memory and local knowledge scratch
+memory/

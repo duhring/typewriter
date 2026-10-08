@@ -10,7 +10,7 @@ The three entry points, each with its step-by-step command sequence in `docs/ass
 
 | Entry | From | To | Procedure |
 |---|---|---|---|
-| `develop` | a topic | approved deck and CueCam bundle | `docs/larry/development.md` |
+| `develop` | a topic | approved deck and CueCam bundle (offers First-Mile Artifact Menu) | `docs/larry/development.md` |
 | `publish` | an edited master | released video with its public URL recorded | `docs/larry/video-production.md` |
 | `article` | a transcript or an intake interview | reconciled final article, approval bound to the file | `docs/larry/video-production.md` section 7 |
 

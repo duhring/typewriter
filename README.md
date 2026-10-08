@@ -71,7 +71,7 @@ The trial is evidence of one working Mac setup, not universal hardware coverage.
 | Google Cloud OAuth client | Calendar, Docs, Drive, Sheets, YouTube upload | `tools/GCAL-SETUP.md`, then `tools/auth_doctor.py` |
 | An AI assistant with file and command access | Runs the interviews, analysis, and drafting; calls tools through `bin/pka`. Claude Code reads `CLAUDE.md` and `.claude/`; any other assistant reads `AGENTS.md` | Claude Code: `npm install -g @anthropic-ai/claude-code`; or Codex, or another |
 | Node (HyperFrames, optional) | HTML-based video renders, captions, TTS; tools call `npx --yes hyperframes`. None of the three core paths need it | `Brewfile` installs node |
-| CueCam Presenter | Presenting and recording a deck; live control needs Accessibility and Screen Recording permission. Bundles build without it | https://cuecam.app |
+| CueCam Presenter | Presenting and recording a deck; live control needs Accessibility and Screen Recording permission. Bundles build without it | https://cuecam-presenter.com |
 | Discord bot (optional) | Chat front-end to the orchestrator | `discord-bridge/README.md` |
 
 ## Layout
@@ -93,11 +93,22 @@ wiki/                compiled views of the corpus
 video-studio/        HyperFrames and motion projects (media gitignored)
 ```
 
-## The two main workflows
+## The workflows and the First-Mile Experience
 
-**Video**: `docs/larry/development.md` (interview, outline, balance check, brief) then `docs/larry/video-production.md` (CueCam recording, clean, QC, private YouTube review, publish, Substack adaptation). State lives in `owners-inbox/video-projects/<slug>/project.json`, written only through `tools/video_project.py`.
+When starting with a new topic or for a first-time user, Typewriter doesn't force an immediate jump in front of a camera. Rushing directly into recording often creates camera dread and creative friction. Instead, Typewriter offers the **First-Mile Artifact Menu**:
 
-**Written pieces**: `docs/larry/youtube-writing.md`. A YouTube URL becomes a transcript and structured extract, Maven produces the title, description, and thumbnail prompt, Reed writes the blog post, Vera reviews.
+1. **Intake Interview**: A short reflective Q&A (5–8 questions) to extract your unvarnished point of view.
+2. **Artifact Menu**: Choose one or more starting mirrors to react to before recording:
+   - **Visual Storyboard**: 5-panel concept or narrative progression
+   - **Evocative Concept Image**: Visual metaphor capturing your central tension
+   - **Structured Brief**: Clean summary of claims, thesis, and takeaways
+   - **CueCam Presenter Deck**: Direct `.cuecam` bundle with download link ([CueCam Presenter](https://cuecam-presenter.com))
+   - **Article Draft Seed**: Text-first companion draft for newsletter/blog writing
+3. **Refine & Branch**: Reacting to concrete surrogate mirrors unlocks your voice. From there, proceed to video recording (`docs/larry/video-production.md`) or companion publishing (`docs/larry/youtube-writing.md`).
+
+**Core paths**:
+- **Video**: `docs/larry/development.md` (interview, first-mile menu, outline, balance check, brief) then `docs/larry/video-production.md` (CueCam recording, clean, QC, private YouTube review, publish, Substack adaptation). State lives in `owners-inbox/video-projects/<slug>/project.json`, written only through `tools/video_project.py`.
+- **Written pieces**: `docs/larry/youtube-writing.md` or `article` entry point. A video or intake becomes a transcript/extract, Maven shapes packaging, Reed drafts the post, Vera reviews.
 
 ## Working across machines
 
@@ -112,5 +123,7 @@ Clone on each Mac, run `bootstrap.sh` on each, and push and pull through git. Fi
 
 - ## More Reference
 
-- On Substack: https://johnduhring.substack.com/p/built-for-you
-- On YouTube: https://youtu.be/ET9Vc8mj8Wk
+- On Substack: [What If Your Typewriter Gave You a Menu Before You Write?](https://johnduhring.substack.com/p/what-if-your-typewriter-gave-you)
+- On YouTube: [What If Your Typewriter Gave You a Menu Before You Write?](https://youtu.be/sK6pXStMu0Q)
+- On Substack: [Built for You](https://johnduhring.substack.com/p/built-for-you)
+- On YouTube: [Typewriter Walkthrough](https://youtu.be/ET9Vc8mj8Wk)

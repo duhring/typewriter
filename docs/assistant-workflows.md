@@ -8,6 +8,7 @@ Procedure and file formats: `docs/larry/development.md`. Files live in `owners-i
 
 ```
 (interview the owner; save interview.md)
+(first-mile option: present the Artifact Menu — Storyboard, Concept Art, Brief, Deck, or Article Seed)
 bin/pka challenge --slug S extract prepare --source owners-inbox/development/S/interview.md
 (write challenge.extract-claims.response.json)      bin/pka challenge --slug S extract import
 (write challenge.verdicts.response.json)            bin/pka challenge --slug S verdicts import
