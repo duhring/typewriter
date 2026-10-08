@@ -51,6 +51,7 @@ One line per tool, grouped by domain. Run everything with `bin/pka <name>` (the 
 | `health_escalation.py` | Deduplicate repeated health findings and manage morning-brief escalation state |
 | `journal.py` | Journal entries, glossary, contacts |
 | `session_log.py` | Durable session logs for Codex work |
+| `session_cleanup.py` | Session wrap-up: clean ephemeral scratch files, verify downloads mirror, record closeout |
 
 ## Google workspace
 

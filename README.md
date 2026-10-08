@@ -1,8 +1,19 @@
-# PKA Starter
+# Typewriter / PKA Starter
 
-A portable copy of the Personal Knowledge Assistance (PKA) machinery: the tools, agent definitions, skills, and workflow docs that turn an interview into a recorded video, a YouTube package, and a written companion piece. It ships **no personal content**: no database, no inbox, no media. You supply your own corpus, keys, and machine identity.
+> **Keep Your Personal Data.**
+
+A portable, local-first personal knowledge assistance system: the tools, agent definitions, skills, and workflow docs that turn an interview into a recorded video, a YouTube package, and a written companion piece — without surrendering your private notes, thinking, or creative voice to cloud platforms. It ships **no personal content**: no database, no inbox, no media. You supply your own corpus, keys, and machine identity.
 
 Runs on macOS (Apple Silicon or Intel) with any AI assistant that can read files and run commands ([Claude Code](https://claude.com/claude-code), Codex, or another). Everything durable is Markdown files, one local SQLite database, and the CLIs in `tools/`.
+
+## Philosophy: Keep Your Personal Data
+
+Most AI creation tools operate as cloud silos: they capture your thoughts, log your drafts to external servers, and lock your thinking inside proprietary platforms. Typewriter is built on the opposite principle:
+
+- **Durable Local Spine**: All durable notes, interviews, briefs, and transcripts are plain Markdown files in your local folders (`owners-inbox/`).
+- **Local SQLite Database**: The structured index and task tracker live in `data/pka.db` on your Mac.
+- **Zero Telemetry or Cloud Database**: Nothing leaves your machine without your explicit command (e.g. when you publish an authorized video or release a blog post).
+- **Model Agnostic**: AI assistants read local files and run local CLI tools (`bin/pka`) under your own subscription or local models. No third-party platform retains your creative data.
 
 What If AI Interviewed You for Your Talk?
 https://youtu.be/nkq5IdTT2FY
@@ -22,6 +33,7 @@ Run every tool through the launcher, which hides where the environment lives:
 ```bash
 bin/pka list                 # tools available
 bin/pka challenge --help     # tools/challenge.py
+bin/pka session-cleanup      # clean scratch files, verify downloads mirror, end session
 bin/pka test                 # the test suite
 bin/pka check                # re-run the Python and toolchain check
 ```
@@ -104,7 +116,9 @@ When starting with a new topic or for a first-time user, Typewriter doesn't forc
    - **Structured Brief**: Clean summary of claims, thesis, and takeaways
    - **CueCam Presenter Deck**: Direct `.cuecam` bundle with download link ([CueCam Presenter](https://cuecam-presenter.com))
    - **Article Draft Seed**: Text-first companion draft for newsletter/blog writing
-3. **Refine & Branch**: Reacting to concrete surrogate mirrors unlocks your voice. From there, proceed to video recording (`docs/larry/video-production.md`) or companion publishing (`docs/larry/youtube-writing.md`).
+   - **Extend the Interview**: *"Want to explore a new angle or clarify your thinking: extend the interview"* with 3–5 deeper follow-up questions.
+3. **Downloads Folder Mirroring**: For each artifact generated, a duplicate copy is automatically placed into `~/Downloads/` for immediate desktop double-click access without digging through repository folders.
+4. **Refine, Branch, or Clean Up**: Reacting to concrete surrogate mirrors unlocks your voice. From there, proceed to video recording (`docs/larry/video-production.md`) or companion publishing (`docs/larry/youtube-writing.md`). When finished, say *"I'm good, end the session"* to trigger `bin/pka session-cleanup`, which removes temporary scratch files and verifies your saved deliverables.
 
 **Core paths**:
 - **Video**: `docs/larry/development.md` (interview, first-mile menu, outline, balance check, brief) then `docs/larry/video-production.md` (CueCam recording, clean, QC, private YouTube review, publish, Substack adaptation). State lives in `owners-inbox/video-projects/<slug>/project.json`, written only through `tools/video_project.py`.

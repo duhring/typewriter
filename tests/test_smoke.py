@@ -38,6 +38,7 @@ class TestImports(unittest.TestCase):
         "video_qc",
         "handoff",
         "env_check",
+        "session_cleanup",
     ]
 
     def test_imports(self):

@@ -16,7 +16,9 @@ The three entry points, each with its step-by-step command sequence in `docs/ass
 
 `bin/pka video_project status --slug S` says where a project stands; `bin/pka challenge --slug S status` does the same for a challenge run. Every tool runs through `bin/pka`.
 
-## Governing principle
+## Governing principle: Keep Your Personal Data
+
+Typewriter / PKA exists to ensure creators **Keep Your Personal Data**. All durable thinking, notes, transcripts, and records remain on the local machine in files and SQLite. No cloud databases, no telemetry, no lock-in.
 
 PKA adopts platform changes when they clarify, expose, or protect the durable spine: files, SQLite, CLI tools, indexed markdown, and explicit agent roles. PKA defers changes that try to replace that spine with a moving platform abstraction before the local contract is stable. Read-only orientation layers (llms.txt, ARIA, stable IDs, `window.PKA`) almost always pass this test; write-path integrations almost never do without a concrete consumer.
 
@@ -77,6 +79,17 @@ Exceptions: workflows whose own tool handles indexing (CueCam intake, journal wr
 | Run viewer | Serve repo root over HTTP (e.g. `python3 -m http.server 8000`), open `viewer.html` |
 
 Run every tool through `bin/pka <tool>`; it finds the Python environment bootstrap created.
+
+## Desktop access rule
+
+Every user-facing artifact generated during a session (CueCam bundles, storyboards, concept images, briefs, draft seeds) must have a duplicate placed directly in `~/Downloads/` so the creator can immediately double-click it in macOS Finder without navigating repo paths.
+
+## Session close & clean-up ("I'm good, end the session")
+
+When the owner says *"I'm good, end the session"*, *"close session"*, or *"clean up"*:
+1. Run `bin/pka session-cleanup` to purge ephemeral scratch files from `tmp/`.
+2. Confirm that all deliverables in `owners-inbox/` have copies in `~/Downloads/`.
+3. Provide a concise closeout summary and conclude the session cleanly.
 
 ## Substantial coding-session close
 

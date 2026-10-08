@@ -1,6 +1,8 @@
-# PKA — Personal Knowledge Assistance
+# Typewriter / PKA — Personal Knowledge Assistance
 
-PKA is a markdown-first, SQLite-backed personal operating system for its owner. The owner's chosen AI assistant does the thinking; PKA's tools prepare material, validate what comes back, and record approvals. No model service or key is involved. Durable state lives in files and `data/pka.db`; assistants are stateless consumers of that spine.
+> **Keep Your Personal Data.**
+
+Typewriter / PKA is a local-first, markdown-first, SQLite-backed personal knowledge operating system built to ensure creators keep full ownership of their personal data. The owner's chosen AI assistant does the thinking; PKA's tools prepare material, validate what comes back, and record approvals. No model service or key is involved. Durable state lives in files and `data/pka.db`; assistants are stateless consumers of that spine.
 
 ## Start here
 

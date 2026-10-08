@@ -461,12 +461,17 @@ During the weekly pass:
 4. Update canonical task records if a system decision or operating focus has genuinely changed
 5. Produce a concise owner-facing refinement brief with the top improvement applied or recommended next
 
-### Close Chat Loop
+### Close Chat & Session Clean-up Loop
 
-When the owner says `close chat`, `close session`, `session close`, or `!close`:
+When the owner says `close chat`, `close session`, `session close`, `!close`, or `"I'm good, end the session"`:
 
-1. Summarize the active session in a short closeout report
-2. Save that report to `owners-inbox/session-logs/`
+1. Run the clean-up tool to purge ephemeral scratch files from `tmp/` and verify deliverables:
+   ```bash
+   bin/pka session-cleanup --summary "<summary>"
+   ```
+2. Verify that copies of all session deliverables (presentations, images, briefs, drafts) are in the user's `~/Downloads/` folder for immediate desktop access.
+3. Summarize the active session in a short closeout report
+4. Save that report to `owners-inbox/session-logs/`
 3. Save a fuller session archive that includes the owner notes, Larry replies, and referenced attachments when available
 4. Ensure both artifacts are indexed and treated as first-class inputs for later recall, QA, and SOP promotion
 5. Append a structured entry to `memory/daily/YYYY-MM-DD.md` (create the file if it does not exist):

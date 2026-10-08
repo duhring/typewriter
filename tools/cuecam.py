@@ -1279,7 +1279,24 @@ def build_cuecam_bundle(title, cards, images, config=None):
         json.dumps(script, indent=2, ensure_ascii=False)
     )
 
+    _mirror_bundle_to_downloads(bundle_path)
     return bundle_path
+
+
+def _mirror_bundle_to_downloads(bundle_path: Path) -> Optional[Path]:
+    """Mirror created .cuecam bundle to ~/Downloads for immediate desktop double-click."""
+    downloads = Path.home() / "Downloads"
+    if not downloads.exists():
+        return None
+    try:
+        import shutil
+        dest = downloads / bundle_path.name
+        if dest.exists():
+            shutil.rmtree(dest, ignore_errors=True)
+        shutil.copytree(bundle_path, dest)
+        return dest
+    except Exception:
+        return None
 
 
 def _index_bundle(bundle_path, *, title, cards, images=0, videos=0):
@@ -1575,6 +1592,7 @@ def cmd_polish(args):
     (bundle_path / "Script.json").write_text(json.dumps(script, indent=2, ensure_ascii=False))
 
     title = args.title or f"{source_stem} polished"
+    _mirror_bundle_to_downloads(bundle_path)
     index_result = _index_bundle(bundle_path, title=title, cards=1, images=0, videos=1)
 
     result = {

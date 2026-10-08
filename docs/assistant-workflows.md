@@ -8,7 +8,8 @@ Procedure and file formats: `docs/larry/development.md`. Files live in `owners-i
 
 ```
 (interview the owner; save interview.md)
-(first-mile option: present the Artifact Menu — Storyboard, Concept Art, Brief, Deck, or Article Seed)
+(first-mile option: present the Artifact Menu — Storyboard, Concept Art, Brief, Deck, Article Seed, or "extend the interview")
+(for each artifact generated, place a duplicate in ~/Downloads/ for double-click preview)
 bin/pka challenge --slug S extract prepare --source owners-inbox/development/S/interview.md
 (write challenge.extract-claims.response.json)      bin/pka challenge --slug S extract import
 (write challenge.verdicts.response.json)            bin/pka challenge --slug S verdicts import
@@ -67,3 +68,16 @@ automated mode:  bin/pka pipeline upload --project S (Google auth); youtube-qa .
 ```
 
 The thumbnail is artwork the owner supplies or you make with an image-capable tool; nothing generates one. The project completes on the delivered materials, the recorded public URL, and (automated mode) a release approval that is still current. Uploading needs the owner's Google authorization; everything before it needs no key.
+
+## Session close and clean-up
+
+When the owner says *"I'm good, end the session"* (or *"close session"*, *"clean up"*, *"wrap up"*):
+
+```bash
+bin/pka session-cleanup [--slug S] [--summary "<summary>"]
+```
+
+1. Purges ephemeral scratch files from `tmp/` without touching durable deliverables in `owners-inbox/`.
+2. Verifies that all created deliverables are mirrored to `~/Downloads/` for immediate double-click access.
+3. Optionally logs a durable closeout entry in `owners-inbox/session-logs/`.
+4. Returns a clean completion status.

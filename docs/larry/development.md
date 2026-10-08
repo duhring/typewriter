@@ -52,15 +52,28 @@ Rules:
 
 ## Stage 1b — The First-Mile Experience: The Artifact Menu
 
-For a new user or a new topic, jumping straight from an interview into a camera recording or full deck often triggers "camera dread" and friction. Rather than forcing an immediate performance, offer the **First-Mile Artifact Menu**—a choice of five concrete starting mirrors to react to:
+For a new user or a new topic, jumping straight from an interview into a camera recording or full deck often triggers "camera dread" and friction. Rather than forcing an immediate performance, offer the **First-Mile Artifact Menu**—a choice of six concrete starting directions:
 
 1. **Visual Storyboard** (`storyboard.md` / image grid): A 5-panel narrative arc mapping how the ideas look visually.
 2. **Evocative Concept Image** (`concept-art.md` / artwork): A provocative visual metaphor capturing the core tension or human element.
 3. **Structured Brief** (`brief.md`): Core thesis, key assertions, audience takeaways, and empowerment promise.
 4. **CueCam Presenter Deck** (`.cuecam` bundle via `bin/pka cuecam compose`): A presentation deck ready for recording. Provide the direct download link to [CueCam Presenter](https://cuecam-presenter.com) so the user can install the app when ready.
 5. **Article Draft Seed** (`blog-draft.md`): A text-first draft for creators who think and iterate better through written words.
+6. **Extend the Interview** (*"Want to explore a new angle or clarify your thinking: extend the interview"*): Ask 3–5 deeper follow-up questions to probe alternative perspectives, address counter-arguments, or sharpen the central insight before creating artifacts.
 
-Present the menu to the user: *"Here are 5 ways to mirror your thoughts back to you. Which would you like to explore first?"*
+Present the menu to the user:
+> *"Here are 6 ways to mirror and develop your thoughts. Which would you like to explore first?"*
+
+### Desktop Access: Mirror Copies to Downloads
+
+Whenever an artifact is created (storyboard, concept image, brief, article draft seed, or CueCam presentation bundle), place a duplicate copy directly into the user's `~/Downloads/` folder:
+- `~/Downloads/<slug>-storyboard.jpg`
+- `~/Downloads/<slug>-concept-art.jpg`
+- `~/Downloads/<slug>-brief.md`
+- `~/Downloads/<slug>-blog-draft.md`
+- `~/Downloads/<slug>.cuecam`
+
+This guarantees zero friction for the creator: they can immediately double-click the file in macOS Finder or Desktop without searching repository directories.
 
 Reacting to a concrete surrogate mirror unlocks creative momentum without stage fright. Once the user is energized and the core claims are confirmed, proceed through the Challenge Gate and Outline stages.
 
