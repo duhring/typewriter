@@ -1298,6 +1298,12 @@ def import_master_qc(*, slug: str, note: str = "") -> dict:
     previous = project["state"]
     project["state"] = "master-qc"
     project["next_action"] = "Approve the exact final master after owner playback review."
+    entries = project.setdefault("entries", [])
+    if entries and "publish" not in entries:
+        # master-qc only belongs to the "publish" entry's state range; without this the
+        # next advance_project() call raises "Unknown current state" because
+        # workflow_sequence() derives its range solely from project["entries"].
+        entries.append("publish")
     project.setdefault("history", []).append({
         "at": _now(),
         "from": previous,
