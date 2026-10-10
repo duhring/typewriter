@@ -16,6 +16,12 @@ The assistant will ask what you would like to explore. A rough idea, question, o
 
 After an interview you can choose a brief, an image, a storyboard, a presentation, a written seed, or more exploration. After artwork feedback and corrections, you get fresh next-step options, including ending the session. As you continue, saved interviews, decisions, and artifacts provide material for later work; the assistant should show the actual sources it builds on. See [the handoff guide](docs/possibilities-and-reuse.md).
 
+## Updates are an option at the start of a run
+
+Your assistant offers **Start with a new idea**, **Continue saved work** when available, **Check for Typewriter updates**, or **End the session**. You can also say “Update my Typewriter” at any time. Checking does not install anything automatically or delay a topic you already chose.
+
+The [update procedure](docs/updating-typewriter.md) inspects your installation, backs up affected files and your database, preserves personal work and customizations, and verifies the system changes before reporting completion. Users on an older version need to request that update once to receive the new startup menu.
+
 ## Philosophy: Keep Your Personal Data
 
 Most AI creation tools operate as cloud silos: they capture your thoughts, log your drafts to external servers, and lock your thinking inside proprietary platforms. Typewriter is built on the opposite principle:

@@ -2,6 +2,10 @@
 
 Command sequences for the owner's assistant, one per entry point. The role and the handoff rules are in `AGENTS.md`; the contract itself is `docs/handoff-contract.md`. Each sequence has a worked example under `tests/acceptance/` that writes every request and response file involved.
 
+## Starting a run
+
+Offer the startup choices in [updating-typewriter.md](updating-typewriter.md), including **Check for Typewriter updates**. Checking is optional and read-only; applying an update requires an explicit update request and follows the backup, staged integration and verification procedure. Proceed with a specific task the owner already requested.
+
 ## Feedback and next-step handoffs
 
 Follow [possibilities-and-reuse.md](possibilities-and-reuse.md) after returning artwork, incorporating feedback, completing packaging, or recording publication. Ask how the artifact fits before presenting a fresh menu. After the owner responds, apply requested corrections and offer relevant choices: extend the interview, create an interpretive image, create a storyboard or visual sequence, continue toward publication when appropriate, or end the session. An explicit next task takes precedence; an end-session request closes immediately.

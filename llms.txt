@@ -14,6 +14,8 @@ Typewriter / PKA is a local-first, markdown-first, SQLite-backed personal knowle
 
 ## Reference docs (load on demand)
 
+- [docs/updating-typewriter.md](docs/updating-typewriter.md) — start-of-run update option and safe assistant-led updates of an existing laptop installation
+
 - [docs/larry/journaling.md](docs/larry/journaling.md) — Journal entries, glossary, contacts
 - [docs/larry/google-tools.md](docs/larry/google-tools.md) — Calendar, Docs, Sheets, Maps, morning brief
 - [docs/larry/records.md](docs/larry/records.md) — Record registration, classification, retention

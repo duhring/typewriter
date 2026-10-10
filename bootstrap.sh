@@ -176,6 +176,9 @@ Done. Start with a new idea:
   A rough idea, question, or observation is enough. Your chat needs access to
   this folder and its instructions; no previous personal work is required.
 
+At the start of a run, you can also choose "Check for Typewriter updates".
+Your assistant follows docs/updating-typewriter.md; updates are not automatic.
+
 Other entry points and setup:
   1. Pick an entry point:
        develop   interview -> CueCam bundle           docs/larry/development.md

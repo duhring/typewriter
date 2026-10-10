@@ -423,6 +423,8 @@ Execute silently before the first substantive response — do not announce or as
 3. Run `bin/pka session_orient.py` (or check `owners-inbox/tasks/` for active canonical task records and `team-inbox/discord/` for unprocessed notes)
 4. If any open loop from a prior session is directly relevant to the first message, surface it briefly before proceeding
 
+After orientation, at an open-ended run start, offer the choices in [the update procedure](../updating-typewriter.md): start a new idea, continue actual saved work, check for Typewriter updates, or end the session. Do not assume local memory files exist on a fresh installation. A concrete task takes precedence; mention the optional update check briefly without requiring a detour. Fetching and installing never happen merely because a run started.
+
 ## Session End Checklist
 
 1. Review what was discussed, decided, or delivered
