@@ -6,6 +6,8 @@ This is a conversation behavior shared by the develop, article, and publish work
 
 A new installation has no personal corpus. Make the conversational entry visible in README and bootstrap completion: “Let’s start a new Typewriter run.” The assistant must have access to the folder and `AGENTS.md`; an unrelated chat does not automatically acquire it. Begin with “What would you like to explore? A rough idea, question, or observation is enough.” Do not imply that earlier projects, preferences, or accumulated learning exist.
 
+At an open-ended run start, include **Check for Typewriter updates** alongside starting a new idea, continuing actual saved work, and ending the session. Follow [updating-typewriter.md](updating-typewriter.md). Do not check or install automatically; do not interrupt a topic already chosen.
+
 ## Feedback before the next-step menu
 
 When returning artwork, first ask “How does this look? What would you like to change?” Wait for the owner’s response. If they request changes, complete them and ask for feedback on the corrected artifact. After acceptance or a request to consider possibilities, offer a small relevant menu: extend the interview, create a new interpretive image, create a new storyboard or visual sequence, continue toward publication when useful, or end the session. Do not assume acceptance from silence or offer unrelated options while a correction is still pending. An explicit next task is authorization to do that task without an extra menu.
