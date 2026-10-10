@@ -17,7 +17,7 @@ case "$MODE" in intake|transcript) ;; *) echo "mode must be intake or transcript
 ROOT="$(cd "${2:-$(dirname "$0")/../..}" && pwd)"
 cd "$ROOT"
 PKA="$ROOT/bin/pka"
-PY="$PKA python"
+py() { "$PKA" python "$@"; }
 SLUG="acceptance-article-$MODE"
 DEV="owners-inbox/development/$SLUG"
 MANIFEST="owners-inbox/video-projects/$SLUG/project.json"
@@ -27,7 +27,7 @@ for var in XAI_API_KEY OPENAI_API_KEY GLM_API_KEY ANTHROPIC_API_KEY LLM_PROVIDER
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 die()  { printf '  \033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
-json() { $PY -c "import json,sys; d=json.load(open(sys.argv[1])); print(eval(sys.argv[2], {}, {'d': d}))" "$@"; }
+json() { py -c "import json,sys; d=json.load(open(sys.argv[1])); print(eval(sys.argv[2], {}, {'d': d}))" "$@"; }
 state() { json "$MANIFEST" "d['state']"; }
 
 step "0. Preconditions ($MODE)"
@@ -74,8 +74,8 @@ else
 EOF
   ok "transcript saved (as fetch-transcript would leave it)"
   OUT=$("$PKA" extract_structured transcript prepare --file "$TRANSCRIPT")
-  REQDIR=$(echo "$OUT" | $PY -c 'import json,sys; print(json.load(sys.stdin)["dir"])')
-  $PY - "$REQDIR/transcript-extract.request.json" <<'EOF'
+  REQDIR=$(echo "$OUT" | py -c 'import json,sys; print(json.load(sys.stdin)["dir"])')
+  py - "$REQDIR/transcript-extract.request.json" <<'EOF'
 import json, sys
 req = json.load(open(sys.argv[1]))
 resp = {"schema_version": 1, "request_id": req["request_id"], "stage": req["stage"],

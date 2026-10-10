@@ -16,6 +16,10 @@ The three entry points, each with its step-by-step command sequence in `docs/ass
 
 `bin/pka video_project status --slug S` says where a project stands; `bin/pka challenge --slug S status` does the same for a challenge run. Every tool runs through `bin/pka`.
 
+## Creator handoffs
+
+At a fresh start, after artwork feedback, after packaging or publication, and when resuming saved work, follow [docs/possibilities-and-reuse.md](docs/possibilities-and-reuse.md). Ask for feedback first, incorporate requested changes, then offer optional next steps including ending the session. `bin/pka project_reflection --slug S` supplies read-only evidence; it does not select an action or grant approval. Ask for missing publication links when the owner reports publishing.
+
 ## Governing principle: Keep Your Personal Data
 
 Typewriter / PKA exists to ensure creators **Keep Your Personal Data**. All durable thinking, notes, transcripts, and records remain on the local machine in files and SQLite. No cloud databases, no telemetry, no lock-in.

@@ -20,7 +20,7 @@ case "$MODE" in owner|automated) ;; *) echo "mode must be owner or automated" >&
 ROOT="$(cd "${2:-$(dirname "$0")/../..}" && pwd)"
 cd "$ROOT"
 PKA="$ROOT/bin/pka"
-PY="$PKA python"
+py() { "$PKA" python "$@"; }
 SLUG="acceptance-publish-$MODE"
 PROJ="owners-inbox/video-projects/$SLUG"
 MANIFEST="$PROJ/project.json"
@@ -31,7 +31,7 @@ for var in XAI_API_KEY OPENAI_API_KEY GLM_API_KEY ANTHROPIC_API_KEY LLM_PROVIDER
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 die()  { printf '  \033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
-json() { $PY -c "import json,sys; d=json.load(open(sys.argv[1])); print(eval(sys.argv[2], {}, {'d': d}))" "$@"; }
+json() { py -c "import json,sys; d=json.load(open(sys.argv[1])); print(eval(sys.argv[2], {}, {'d': d}))" "$@"; }
 state() { json "$MANIFEST" "d['state']"; }
 vp() { "$PKA" video_project "$@"; }
 
@@ -72,7 +72,7 @@ ok "created at master-qc ($MODE_FLAG); QC passed; master approved by the owner"
 step "3. Package handoff (assistant writes the package)"
 OUT=$("$PKA" pipeline package prepare --project "$SLUG" --transcript "$WORK/master-transcript.md")
 echo "$OUT" | grep -q '"status": "prepared"' || die "package prepare failed: $OUT"
-$PY - "$PROJ/pipeline.package.request.json" <<'EOF'
+py - "$PROJ/pipeline.package.request.json" <<'EOF'
 import json, sys
 req = json.load(open(sys.argv[1]))
 segs = req["payload"]["segments"]
@@ -112,7 +112,7 @@ echo "$OUT" | grep -q '"chapters": 2' || die "package import failed: $OUT"
 ok "package imported: chapters on the timeline, saved, indexed, attached; chapter-review request prepared"
 
 step "4. Chapter review handoff (assistant reviews each chapter)"
-$PY - "$PROJ/pipeline.chapter-review.request.json" <<'EOF'
+py - "$PROJ/pipeline.chapter-review.request.json" <<'EOF'
 import json, sys
 req = json.load(open(sys.argv[1]))
 items = [{"id": c["id"], "supported": True, "reason": "The label matches the content that begins at its boundary."}

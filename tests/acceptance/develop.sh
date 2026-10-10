@@ -18,7 +18,7 @@ cd "$ROOT"
 PKA="$ROOT/bin/pka"
 SLUG="acceptance-develop"
 DEV="owners-inbox/development/$SLUG"
-PY="$PKA python"
+py() { "$PKA" python "$@"; }
 
 # No model keys, no provider selection, no local model server.
 for var in XAI_API_KEY OPENAI_API_KEY GLM_API_KEY ANTHROPIC_API_KEY LLM_PROVIDER LLM_FALLBACK; do unset "$var" || true; done
@@ -26,7 +26,7 @@ for var in XAI_API_KEY OPENAI_API_KEY GLM_API_KEY ANTHROPIC_API_KEY LLM_PROVIDER
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 die()  { printf '  \033[31m✗\033[0m %s\n' "$*" >&2; exit 1; }
-json() { $PY -c "import json,sys; d=json.load(open(sys.argv[1])); print(eval(sys.argv[2], {}, {'d': d}))" "$@"; }
+json() { py -c "import json,sys; d=json.load(open(sys.argv[1])); print(eval(sys.argv[2], {}, {'d': d}))" "$@"; }
 
 step "0. Preconditions"
 "$PKA" check >/dev/null && ok "python and toolchain check passes"
@@ -64,7 +64,7 @@ step "2. Challenge gate — stage 1: extract claims"
 "$PKA" challenge --slug "$SLUG" extract prepare --source "$DEV/interview.md" >/dev/null
 REQ="$DEV/challenge.extract-claims.request.json"
 [ -f "$REQ" ] || die "extract request not written"
-$PY - "$REQ" <<'EOF'
+py - "$REQ" <<'EOF'
 import json, sys
 req = json.load(open(sys.argv[1]))
 resp = {"schema_version": 1, "request_id": req["request_id"], "stage": req["stage"],
@@ -83,13 +83,13 @@ resp = {"schema_version": 1, "request_id": req["request_id"], "stage": req["stag
 json.dump(resp, open(sys.argv[1].replace(".request.json", ".response.json"), "w"), indent=2)
 EOF
 OUT=$("$PKA" challenge --slug "$SLUG" extract import)
-[ "$(echo "$OUT" | $PY -c 'import json,sys; print(json.load(sys.stdin)["claims"])')" = "5" ] || die "expected 5 claims: $OUT"
+[ "$(echo "$OUT" | py -c 'import json,sys; print(json.load(sys.stdin)["claims"])')" = "5" ] || die "expected 5 claims: $OUT"
 [ "$(json "$DEV/claims.json" "[c['support'] for c in d['claims'] if c['claim']=='The studio machine is obsolete'][0]")" = "quote_not_found" ] || die "fabricated quote was not flagged"
 ok "5 claims registered; the fabricated quote is flagged quote_not_found; verdicts request prepared"
 
 step "3. Challenge gate — stage 2: verdicts"
 REQ="$DEV/challenge.verdicts.request.json"
-$PY - "$REQ" <<'EOF'
+py - "$REQ" <<'EOF'
 import json, sys
 req = json.load(open(sys.argv[1]))
 verdict = {"c1": "survives", "c2": "survives", "c3": "proposed_drop", "c4": "proposed_drop", "c5": "weakened"}
@@ -107,7 +107,7 @@ ok "verdicts applied; 3 claims go to context review, 2 held without verified con
 
 step "4. Challenge gate — stage 3: context review"
 REQ="$DEV/challenge.context-review.request.json"
-$PY - "$REQ" <<'EOF'
+py - "$REQ" <<'EOF'
 import json, sys
 req = json.load(open(sys.argv[1]))
 items = []
@@ -129,7 +129,7 @@ echo "$AGAIN" | grep -q already_imported || die "reimport was not a no-op"
 ok "2 cleared, report written, reimport is a no-op"
 
 step "5. Owner ruling (the only approval-like act in the gate) and refresh"
-$PY - "$DEV/claims.json" <<'EOF'
+py - "$DEV/claims.json" <<'EOF'
 import json, sys
 reg = json.load(open(sys.argv[1]))
 for c in reg["claims"]:
@@ -155,7 +155,7 @@ EOF
 OUT=$("$PKA" balance_check --slug "$SLUG" prepare --outline "$DEV/outline.md")
 echo "$OUT" | grep -q '"status": "prepared"' || die "balance prepare failed: $OUT"
 REQ="$DEV/balance-check.analysis.request.json"
-$PY - "$REQ" <<'EOF'
+py - "$REQ" <<'EOF'
 import json, sys
 req = json.load(open(sys.argv[1]))
 resp = {"schema_version": 1, "request_id": req["request_id"], "stage": req["stage"],
@@ -192,7 +192,7 @@ Title: Anyone can use the system
 4. "What critics get wrong", and why it does not matter
 EOF
 OUT=$("$PKA" cuecam compose --spec-file "$DEV/deck.spec" --title "Anyone can use the system")
-BUNDLE=$(echo "$OUT" | $PY -c 'import json,sys; print(json.load(sys.stdin)["path"])')
+BUNDLE=$(echo "$OUT" | py -c 'import json,sys; print(json.load(sys.stdin)["path"])')
 [ -d "$BUNDLE" ] || die "bundle not built: $OUT"
 ok "bundle built at $BUNDLE"
 

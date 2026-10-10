@@ -60,6 +60,16 @@ class MemoryCase(unittest.TestCase):
 
 
 class TestSync(MemoryCase):
+    def test_sync_refreshes_provenance_when_only_source_path_changes(self):
+        self.sync()
+        self.chunks[0].source_path = "owners-inbox/recovered/new-path.md"
+        result = self.sync()
+        self.assertEqual(result["updated_chunks"], 1)
+        conn = self.readonly()
+        row = conn.execute("SELECT source_path FROM memory_chunks WHERE source_key=?", (self.chunks[0].source_key,)).fetchone()
+        self.assertEqual(row[0], self.chunks[0].source_path)
+        self.assertEqual(self.sync()["updated_chunks"], 0)
+
     def test_sync_builds_the_full_text_index_without_a_model(self):
         result = self.sync()
         self.assertEqual((result["total_chunks"], result["updated_chunks"]), (3, 3))

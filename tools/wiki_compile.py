@@ -1696,7 +1696,8 @@ def _render_report(results: list[dict[str, Any]]) -> str:
 def _wiki_pages() -> list[WikiPage]:
     pages: list[WikiPage] = []
     for path in sorted(WIKI_DIR.rglob("*.md")):
-        if path.name == "README.md":
+        # README and the append-only change log are not compiled context pages.
+        if path == WIKI_DIR / "log.md" or path.name == "README.md":
             continue
         text = path.read_text(encoding="utf-8")
         frontmatter, body = _parse_frontmatter(text)

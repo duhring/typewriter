@@ -34,6 +34,7 @@ One line per tool, grouped by domain. Run everything with `bin/pka <name>` (the 
 | `pka_index.py` | Index durable artifacts into data/pka.db (definition-of-done step) |
 | `harness_audit.py` | Measure core instruction routes, duplication, plugin/agent inventory, approvals, and inbox startup load |
 | `index_sweep.py` | Auto-index sweep for artifacts that missed indexing |
+| `project_reflection.py` | Read-only saved-work reflection and optional next-step capabilities; never selects or approves |
 | `memory_retrieval.py` | Retrieve relevant prior context for a new request |
 | `conversation_memory.py` | Rolling conversation memory for the Discord bots |
 | `wiki_compile.py` | Compile durable source material into wiki pages |

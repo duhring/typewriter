@@ -23,7 +23,7 @@ usage() { sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 # Commands that need no interpreter.
 case "${1:-}" in
   ""|-h|--help|help) usage; exit 0 ;;
-  list) ls "$ROOT/tools"/*.py | xargs -n1 basename | sed 's/\.py$//' | grep -v '^_' | sort; exit 0 ;;
+  list) for path in "$ROOT/tools"/*.py; do basename "$path" .py; done | grep -v '^_' | sort; exit 0 ;;
 esac
 
 if [ -n "${PKA_PYTHON:-}" ]; then
