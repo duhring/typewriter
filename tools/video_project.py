@@ -18,6 +18,7 @@ import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 from pka_index import GovernedRecordError, forget_markdown_artifact, index_markdown_artifact
 
@@ -634,6 +635,10 @@ def _render_overview(project: dict) -> str:
             f'- Privacy: `{youtube.get("privacy") or "unknown"}`',
             f'- QA complete: `{str(youtube_qa_complete(project)).lower()}`',
         ])
+        confirmation = youtube.get("owner_release_confirmation")
+        if confirmation:
+            lines.append(f'- Public release confirmed by **{confirmation["by"]}** '
+                         f'({confirmation["confirmed_at"]}); individual QA items remain as recorded.')
     else:
         lines.append("- Not uploaded.")
 
@@ -1027,8 +1032,11 @@ def _approval_hashes(project: dict, gate: str) -> dict[str, list[str]]:
         youtube = project.get("youtube", {})
         if not youtube.get("video_id"):
             raise ValueError("Cannot approve release: private YouTube upload is missing")
+        identity = {"video_id": youtube["video_id"], "qa": youtube.get("qa", {})}
+        if youtube.get("owner_release_confirmation"):
+            identity["owner_release_confirmation"] = youtube["owner_release_confirmation"]
         release_identity = json.dumps(
-            {"video_id": youtube["video_id"], "qa": youtube.get("qa", {})},
+            identity,
             sort_keys=True,
             separators=(",", ":"),
         )
@@ -1701,6 +1709,65 @@ def record_youtube_qa(
     }
 
 
+def confirm_owner_publication(
+    *, slug: str, url: str, by: str, note: str, published_at: str | None = None
+) -> dict:
+    """Record the owner's approval and already-public release of an uploaded video.
+
+    This is a human confirmation, not a platform action or a QA checklist.
+    It preserves unreported checks and binds release approval to current bytes.
+    """
+    project = load_project(slug)
+    _require(project, project.get("publication_mode") == "automated-private",
+             "Owner confirmation is for an existing automated private upload")
+    _require(project, project["state"] in {"private-upload", "youtube-qa", "release-approved"},
+             "Owner confirmation requires an existing uploaded video awaiting release")
+    _require(project, not [b for b in project.get("blockers", []) if not b.get("resolved_at")],
+             "Resolve active blockers before confirming publication")
+    _require(project, bool(by.strip()) and bool(note.strip()),
+             "Owner identity and explicit approval/publication evidence are required")
+    parsed = urlparse(url.strip())
+    video_id = None
+    if parsed.scheme == "https" and parsed.hostname == "youtu.be":
+        video_id = parsed.path.strip("/")
+    elif parsed.scheme == "https" and parsed.hostname in {"youtube.com", "www.youtube.com", "m.youtube.com"} and parsed.path == "/watch":
+        video_id = parse_qs(parsed.query).get("v", [None])[0]
+    _require(project, bool(video_id and re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id)),
+             "A valid YouTube watch URL is required")
+    _require(project, video_id == project.get("youtube", {}).get("video_id"),
+             "Confirmed URL must match this project's recorded upload")
+    _require(project, not project.get("publications", {}).get("youtube"),
+             "Publication is already recorded; historical events are not overwritten")
+    _require(project, approval_is_current(project, "master") and approval_is_current(project, "package"),
+             "Current master and package approvals are required")
+    if published_at is not None:
+        datetime.fromisoformat(published_at)
+    stamp = _now()
+    confirmation = {"by": by.strip(), "note": note.strip(), "url": url.strip(), "confirmed_at": stamp}
+    project["youtube"]["owner_release_confirmation"] = confirmation
+    project.setdefault("approvals", {})["release"] = {
+        "approved_by": by.strip(), "approved_at": stamp,
+        "artifact_hashes": _approval_hashes(project, "release"),
+        "note": note.strip(), "basis": "owner-confirmed-publication",
+    }
+    project.setdefault("publications", {})["youtube"] = {
+        "url": url.strip(), "published_at": published_at, "confirmed_at": stamp,
+        "confirmed_by": by.strip(), "basis": "owner-confirmed-publication",
+    }
+    previous = project["state"]
+    project["youtube"]["privacy"] = "public"
+    project["state"] = "published"
+    project["next_action"] = "Public release confirmed by the owner; complete the delivered video entry."
+    project.setdefault("history", []).append({
+        "at": stamp, "from": previous, "to": "published", "event": "owner-confirmed-publication",
+        "note": note.strip(), "by": by.strip(),
+    })
+    result = save_project(project)
+    return {**result, "publication": project["publications"]["youtube"],
+            "approval_current": approval_is_current(project, "release"),
+            "qa_complete": youtube_qa_complete(project)}
+
+
 def record_publication(
     *, slug: str, channel: str, url: str, published_at: str | None = None
 ) -> dict:
@@ -2216,6 +2283,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--url", required=True)
     p.add_argument("--published-at")
 
+    p = sub.add_parser("confirm-owner-publication", help="Record explicit owner approval and an already-public uploaded video without inventing QA checks")
+    p.add_argument("--slug", required=True)
+    p.add_argument("--url", required=True)
+    p.add_argument("--by", required=True)
+    p.add_argument("--note", required=True)
+    p.add_argument("--published-at")
+
     p = sub.add_parser("substack-brief")
     p.add_argument("--slug", required=True)
     p.add_argument("--pov", required=True)
@@ -2309,6 +2383,10 @@ def main() -> int:
     elif args.command == "publication":
         result = record_publication(
             slug=args.slug, channel=args.channel, url=args.url, published_at=args.published_at,
+        )
+    elif args.command == "confirm-owner-publication":
+        result = confirm_owner_publication(
+            slug=args.slug, url=args.url, by=args.by, note=args.note, published_at=args.published_at,
         )
     elif args.command == "substack-brief":
         result = create_substack_brief(

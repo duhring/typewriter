@@ -23,6 +23,8 @@ Typewriter / PKA is a local-first, markdown-first, SQLite-backed personal knowle
 - [docs/assistant-workflows.md](docs/assistant-workflows.md) — the three entry points as command sequences: develop, publish, article
 - [docs/larry/video-production.md](docs/larry/video-production.md) — Manual-first video project states, approval gates, QC, private YouTube review, Substack, and metrics
 
+- [docs/possibilities-and-reuse.md](docs/possibilities-and-reuse.md) — fresh starts, feedback, next-step menus, publication links, and explicit reuse
+
 ## Key directories
 
 - `owners-inbox/` — Owner-facing deliverables (final destination for finished work)

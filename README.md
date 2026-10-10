@@ -6,6 +6,16 @@ A portable, local-first personal knowledge assistance system: the tools, agent d
 
 Runs on macOS (Apple Silicon or Intel) with any AI assistant that can read files and run commands ([Claude Code](https://claude.com/claude-code), Codex, or another). Everything durable is Markdown files, one local SQLite database, and the CLIs in `tools/`.
 
+## Start with a new idea
+
+A fresh download starts without your personal interviews, projects, or previous work. Open the Typewriter folder with your assistant, point it to `AGENTS.md`, and say:
+
+> Let’s start a new Typewriter run.
+
+The assistant will ask what you would like to explore. A rough idea, question, or observation is enough; you do not need a video or an existing project. Your chat needs access to this folder and its instructions for the phrase to work.
+
+After an interview you can choose a brief, an image, a storyboard, a presentation, a written seed, or more exploration. After artwork feedback and corrections, you get fresh next-step options, including ending the session. As you continue, saved interviews, decisions, and artifacts provide material for later work; the assistant should show the actual sources it builds on. See [the handoff guide](docs/possibilities-and-reuse.md).
+
 ## Philosophy: Keep Your Personal Data
 
 Most AI creation tools operate as cloud silos: they capture your thoughts, log your drafts to external servers, and lock your thinking inside proprietary platforms. Typewriter is built on the opposite principle:

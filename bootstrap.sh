@@ -170,7 +170,13 @@ command -v node >/dev/null && ok "node found (only HyperFrames renders use it)" 
 
 cat <<'NEXT'
 
-Done. Next:
+Done. Start with a new idea:
+  Open this folder with your assistant and point it at AGENTS.md. Then say:
+    "Let’s start a new Typewriter run."
+  A rough idea, question, or observation is enough. Your chat needs access to
+  this folder and its instructions; no previous personal work is required.
+
+Other entry points and setup:
   1. Pick an entry point:
        develop   interview -> CueCam bundle           docs/larry/development.md
        publish   edited video -> YouTube              docs/larry/video-production.md

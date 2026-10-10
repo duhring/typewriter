@@ -260,6 +260,26 @@ bin/pka video_project advance --slug <slug> --to published
 bin/pka video_project advance --slug <slug>                 # complete
 ```
 
+### Owner confirms an already-public uploaded video
+
+When the owner explicitly approves an existing private upload and reports making it public,
+record that actual handoff without inventing per-item QA results:
+
+```bash
+bin/pka video_project confirm-owner-publication --slug <slug> \
+  --url <uploaded-video-url> --by "<owner>" --note "<owner's explicit approval and publication confirmation>" \
+  --published-at YYYY-MM-DD
+bin/pka video_project advance --slug <slug>
+```
+
+This path applies only to a recorded automated private upload with current master and package approvals.
+It matches the URL to the recorded video ID, records a release approval bound to the current artifacts
+and owner confirmation, and moves the run to `published`. Existing QA items stay unchanged; the
+overview distinguishes owner confirmation from a completed checklist. It performs no platform action.
+Omit `--published-at` if the publication date is unknown; confirmation time is recorded separately.
+The ordinary checklist-based release path remains available. Use this only for an explicit human
+confirmation that approval and public release have already happened.
+
 ## 7. Editorial Loop and Substack Adaptation
 
 The published video is the input to a second editorial pass, not the end of the

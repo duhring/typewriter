@@ -558,8 +558,8 @@ def collect_chunks(conn: sqlite3.Connection) -> list[Chunk]:
 def sync_memory(conn: sqlite3.Connection) -> dict[str, int]:
     _ensure_schema(conn)
     existing = {
-        row[0]: row[1]
-        for row in conn.execute("SELECT source_key, content_hash FROM memory_chunks")
+        row[0]: (row[1], row[2])
+        for row in conn.execute("SELECT source_key, content_hash, source_path FROM memory_chunks")
     }
 
     all_chunks = collect_chunks(conn)
@@ -568,7 +568,7 @@ def sync_memory(conn: sqlite3.Connection) -> dict[str, int]:
     unchanged = 0
 
     for chunk in all_chunks:
-        if existing.get(chunk.source_key) == chunk.content_hash:
+        if existing.get(chunk.source_key) == (chunk.content_hash, chunk.source_path):
             unchanged += 1
             continue
         pending.append(chunk)
