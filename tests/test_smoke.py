@@ -39,6 +39,8 @@ class TestImports(unittest.TestCase):
         "handoff",
         "env_check",
         "session_cleanup",
+        "mindmap",
+        "safe_export",
     ]
 
     def test_imports(self):

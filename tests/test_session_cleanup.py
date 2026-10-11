@@ -66,8 +66,8 @@ class TestSessionCleanup(unittest.TestCase):
         )
 
         self.assertEqual(len(mirrored), 2)
-        self.assertTrue((self.downloads_dir / "brief.md").exists())
-        self.assertTrue((self.downloads_dir / "storyboard.jpg").exists())
+        self.assertTrue((self.downloads_dir / slug / "brief.md").exists())
+        self.assertTrue((self.downloads_dir / slug / "storyboard.jpg").exists())
 
     def test_cleanup_session_summary(self):
         (self.tmp_dir / "junk.txt").write_text("junk")

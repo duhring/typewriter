@@ -219,6 +219,7 @@ WORKFLOW_STAGE_SEQUENCE = [
 # Declaration order is stage order; the renderer relies on it.
 ARTIFACT_FLOW = {
     "interview": {"stage": "development", "expected_inputs": []},
+    "mindmap": {"stage": "development", "expected_inputs": ["interview"]},
     "claims_register": {"stage": "development", "expected_inputs": ["interview"]},
     "challenge_report": {"stage": "development", "expected_inputs": ["claims_register"]},
     "outline": {"stage": "development", "expected_inputs": ["claims_register"]},
@@ -280,6 +281,7 @@ GATE_OPTIONAL_ARTIFACTS = {
 }
 DEVELOPMENT_ARTIFACTS = {
     "interview.md": "interview",
+    "mindmap.md": "mindmap",
     "claims.json": "claims_register",
     "challenge.md": "challenge_report",
     "outline.md": "outline",
@@ -290,6 +292,7 @@ DEVELOPMENT_ARTIFACTS = {
     "image-prompts.md": "image_suggestions",
 }
 DEVELOPMENT_CATEGORIES = {
+    "mindmap.md": "development-mindmap",
     "interview.md": "development-interview",
     "challenge.md": "development-challenge",
     "outline.md": "development-outline",
@@ -1351,6 +1354,7 @@ def sync_development(*, slug: str, development_dir: Path | None = None) -> dict:
     if not directory.is_dir():
         raise FileNotFoundError(directory)
     attached: list[str] = []
+    indexing_results = {}
     for filename, kind in DEVELOPMENT_ARTIFACTS.items():
         path = directory / filename
         if not path.exists():
@@ -1362,7 +1366,10 @@ def sync_development(*, slug: str, development_dir: Path | None = None) -> dict:
             note="Synchronized from the shared development folder.",
         )
         category = DEVELOPMENT_CATEGORIES.get(filename)
-        if category:
+        if category == "development-mindmap":
+            from mindmap import index_outline
+            indexing_results[kind] = index_outline(path)
+        elif category:
             index_markdown_artifact(
                 path,
                 title=f"{load_project(slug)['title']} — {kind.replace('_', ' ').title()}",
@@ -1379,6 +1386,7 @@ def sync_development(*, slug: str, development_dir: Path | None = None) -> dict:
         "state": project["state"],
         "development_dir": _display_path(directory),
         "attached": attached,
+        "indexing_results": indexing_results,
     }
 
 

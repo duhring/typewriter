@@ -20,7 +20,7 @@ class Reflection(unittest.TestCase):
         r=pr.reflect('pilot',root=self.root)
         self.assertIsNone(r['workflow_state'])
         self.assertEqual(r['saved_material'][0]['kind'],'interview')
-        self.assertTrue({'explore','brief','storyboard','concept-image','presentation','article-seed','pause'} <= {p['id'] for p in r['possibilities']})
+        self.assertTrue({'mindmap','explore','brief','storyboard','concept-image','presentation','article-seed','pause'} <= {p['id'] for p in r['possibilities']})
         self.assertIsNone(r['selected_possibility'])
         self.assertTrue(r['reuse']['requires_explicit_choice'])
         self.assertFalse(self.manifest.exists())

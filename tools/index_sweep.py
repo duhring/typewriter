@@ -39,6 +39,7 @@ DIR_CATEGORY = {
 DEFAULT_CATEGORY = "knowledge-base"
 CATEGORIES_FILE = PKA_ROOT / "data" / "categories.json"
 DEVELOPMENT_FILENAME_CATEGORY = {
+    "mindmap.md": "development-mindmap",
     "interview.md": "development-interview",
     "outline.md": "development-outline",
     "brief.md": "development-brief",

@@ -59,61 +59,11 @@ def mirror_to_downloads(
     downloads_dir: Path | None = None,
     owners_inbox: Path | None = None,
     dry_run: bool = False,
-) -> list[str]:
-    """Ensure key artifacts from owners-inbox have copies in ~/Downloads/."""
-    target_downloads = downloads_dir or DOWNLOADS_DIR
-    target_inbox = owners_inbox or OWNERS_INBOX
-    if not dry_run:
-        target_downloads.mkdir(parents=True, exist_ok=True)
-
-    mirrored = []
-    search_paths: list[Path] = []
-
-    if slug:
-        dev_dir = target_inbox / "development" / slug
-        if dev_dir.exists():
-            search_paths.extend(dev_dir.glob("*"))
-        pres_dir = target_inbox / "presentations"
-        if pres_dir.exists():
-            search_paths.extend(pres_dir.glob(f"*{slug}*"))
-        blog_dir = target_inbox / "blog"
-        if blog_dir.exists():
-            search_paths.extend(blog_dir.glob(f"*{slug}*"))
-    else:
-        # Check files modified today across development, presentations, briefs, and blog
-        today = date.today()
-        for sub in ["development", "presentations", "briefs", "blog"]:
-            sub_dir = target_inbox / sub
-            if not sub_dir.exists():
-                continue
-            for item in sub_dir.rglob("*"):
-                if item.is_file() or (item.is_dir() and item.suffix == ".cuecam"):
-                    try:
-                        mtime = datetime.fromtimestamp(item.stat().st_mtime).date()
-                        if mtime == today:
-                            search_paths.append(item)
-                    except OSError:
-                        pass
-
-    for source in search_paths:
-        if source.name.startswith(".") or source.name == ".gitkeep":
-            continue
-        # Mirror cuecam bundles, images, markdown briefs/drafts/storyboards, and json registers
-        if source.suffix in [".cuecam", ".jpg", ".jpeg", ".png", ".md", ".json"]:
-            dest = target_downloads / source.name
-            if not dry_run:
-                try:
-                    if source.is_dir() and source.suffix == ".cuecam":
-                        if dest.exists():
-                            shutil.rmtree(dest, ignore_errors=True)
-                        shutil.copytree(source, dest)
-                    elif source.is_file():
-                        shutil.copy2(source, dest)
-                except Exception:
-                    continue
-            mirrored.append(str(dest))
-
-    return list(dict.fromkeys(mirrored))
+) -> list[dict]:
+    """Return per-item export outcomes; bundle contents remain inside bundles."""
+    from safe_export import discover, export_items
+    return export_items(discover(owners_inbox or OWNERS_INBOX, slug),
+                        downloads_dir or DOWNLOADS_DIR, dry_run)
 
 
 def cleanup_session(
@@ -141,7 +91,7 @@ def cleanup_session(
                 title=title or "Session Closeout",
                 summary=summary or "Session ended; workspace cleaned and deliverables verified.",
                 task_kind="cleanup",
-                deliverables=mirrored_files,
+                deliverables=[x["path"] for x in mirrored_files],
                 learnings=[],
                 open_loops=[],
                 tags=["session-close", "cleanup"],
@@ -154,7 +104,7 @@ def cleanup_session(
             pass
 
     return {
-        "status": "clean",
+        "status": "failed" if any(x["status"] == "failed" for x in mirrored_files) else "clean",
         "scratch_cleaned": cleaned_scratch,
         "mirrored_to_downloads": mirrored_files,
         "session_log": log_path,
@@ -186,7 +136,7 @@ def main() -> int:
 
     if args.json:
         print(json.dumps(result, indent=2))
-        return 0
+        return 1 if result["status"] == "failed" else 0
 
     print("Typewriter Session Clean-up")
     print("---------------------------")
@@ -198,17 +148,17 @@ def main() -> int:
         print("✓ Scratch directory (tmp/) is clean.")
 
     if result["mirrored_to_downloads"]:
-        print(f"✓ Verified / copied to Downloads ({len(result['mirrored_to_downloads'])} items):")
+        print(f"Export results in Downloads ({len(result['mirrored_to_downloads'])} items):")
         for item in result["mirrored_to_downloads"]:
-            print(f"    - {item}")
+            print(f"    - {item['status']}: {item['path']}" + (f" ({item['reason']})" if item.get("reason") else ""))
     else:
         print("✓ Downloads folder checked.")
 
     if result["session_log"]:
         print(f"✓ Session closeout logged: {result['session_log']}")
 
-    print("\nSession cleanly concluded. Your personal data remains on your machine.")
-    return 0
+    print("\nSession export " + ("has failures" if result["status"] == "failed" else "finished") + ". Your personal data remains on your machine.")
+    return 1 if result["status"] == "failed" else 0
 
 
 if __name__ == "__main__":
