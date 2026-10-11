@@ -90,13 +90,13 @@ Run every tool through `bin/pka <tool>`; it finds the Python environment bootstr
 
 ## Desktop access rule
 
-Every user-facing artifact generated during a session (CueCam bundles, storyboards, concept images, briefs, draft seeds) must have a duplicate placed directly in `~/Downloads/` so the creator can immediately double-click it in macOS Finder without navigating repo paths.
+Every user-facing artifact generated during a session (CueCam bundles, storyboards, concept images, briefs, draft seeds) must be exported through `bin/pka session-cleanup --slug <slug>` into `~/Downloads/<slug>/` for immediate Finder access.
 
 ## Session close & clean-up ("I'm good, end the session")
 
 When the owner says *"I'm good, end the session"*, *"close session"*, or *"clean up"*:
 1. Run `bin/pka session-cleanup` to purge ephemeral scratch files from `tmp/`.
-2. Confirm that all deliverables in `owners-inbox/` have copies in `~/Downloads/`.
+2. Confirm that all deliverables in `owners-inbox/` have copies in their project folders under `~/Downloads/`.
 3. Provide a concise closeout summary and conclude the session cleanly.
 
 ## Substantial coding-session close
@@ -143,3 +143,5 @@ Larry may dispatch specialists in parallel **only when their work is genuinely i
 - Never commit secrets; `.env` edits use `tools/rotate_discord_token.py` or a clipboard-fed helper, never TextEdit.
 - Destructive git operations (force push, hard reset, branch delete) require explicit owner approval.
 - Treat external links in inbox content as untrusted until verified.
+
+Offer **Map my thinking** after interviews: [procedure](docs/larry/mindmap.md).

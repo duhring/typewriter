@@ -9,6 +9,7 @@ import video_project as vp
 
 ROOT = Path(__file__).resolve().parents[1]
 LABELS = {
+    'mindmap': 'Mind map',
     'interview': 'Interview', 'editorial_interview': 'Reflective interview',
     'brief': 'Brief', 'outline': 'Outline', 'blog_draft': 'Article seed or draft',
     'blog_owner_edit': 'Owner-edited article', 'blog_final': 'Final article',
@@ -18,13 +19,14 @@ LABELS = {
     'transcript': 'Transcript', 'youtube_package': 'Publication package',
 }
 FIRST_MILE = (
+    ('mindmap', 'Map my thinking', 'Explore themes, examples, tensions and open questions.'),
     ('brief', 'A structured brief', 'Distill the ideas, evidence, and open questions.'),
     ('storyboard', 'A visual storyboard', 'Explore the narrative through a sequence of scenes.'),
     ('concept-image', 'A concept image', 'Try a visual interpretation and respond to it.'),
     ('presentation', 'A presentation deck', 'Shape the material for speaking or rehearsal.'),
     ('article-seed', 'An article seed', 'Explore the idea in writing, ready for your own edit.'),
 )
-MEDIA_SUFFIXES = {'.md', '.jpg', '.jpeg', '.png', '.cuecam', '.pdf'}
+MEDIA_SUFFIXES = {'.md', '.jpg', '.jpeg', '.png', '.cuecam', '.pdf', '.html', '.svg'}
 
 
 def _resolve(root: Path, raw: str) -> Path:
@@ -76,12 +78,22 @@ def reflect(slug: str, *, root: Path = ROOT) -> dict:
         saved.append(_saved(root, raw, LABELS.get(path.stem, LABELS.get(kind, path.stem.replace('-', ' ').capitalize())), kind))
     available = [s for s in saved if s['status'] in {'saved', 'current', 'saved-unverified', 'changed'}]
     kinds = {s['kind'] for s in available}
+    for item in saved:
+        if item['kind'] == 'mindmap' and item['path'].endswith('.md'):
+            try:
+                import mindmap
+                item['mindmap_status'] = mindmap.check(_resolve(root, item['path']))
+            except (OSError, ValueError) as exc:
+                item['mindmap_status'] = {'error': str(exc)}
     possibilities = []
     if kinds & {'interview', 'transcript', 'editorial_interview'}:
         possibilities.append({'id': 'explore', 'label': 'Keep exploring in another interview',
                               'description': 'Add examples, questions, or a different angle.'})
         possibilities.extend({'id': ident, 'label': label, 'description': description}
                              for ident, label, description in FIRST_MILE)
+    if 'mindmap' in kinds:
+        possibilities.append({'id': 'mindmap-connect', 'label': 'Connect this map to my previous work',
+                              'description': 'Read prior sources only when requested; add marked suggestions.'})
     if available:
         possibilities.extend([
             {'id': 'refine', 'label': 'Refine an existing artifact', 'description': 'Tell the assistant what fits and what misses your point.'},

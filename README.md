@@ -132,8 +132,9 @@ When starting with a new topic or for a first-time user, Typewriter doesn't forc
    - **Structured Brief**: Clean summary of claims, thesis, and takeaways
    - **CueCam Presenter Deck**: Direct `.cuecam` bundle with download link ([CueCam Presenter](https://cuecam-presenter.com))
    - **Article Draft Seed**: Text-first companion draft for newsletter/blog writing
+   - **Map my thinking**: An editable outline and offline expandable mindmap; [procedure](docs/larry/mindmap.md).
    - **Extend the Interview**: *"Want to explore a new angle or clarify your thinking: extend the interview"* with 3–5 deeper follow-up questions.
-3. **Downloads Folder Mirroring**: For each artifact generated, a duplicate copy is automatically placed into `~/Downloads/` for immediate desktop double-click access without digging through repository folders.
+3. **Downloads Folder Mirroring**: For each artifact generated, `bin/pka session-cleanup --slug <slug>` safely copies it into `~/Downloads/<slug>/` for immediate desktop double-click access without digging through repository folders.
 4. **Refine, Branch, or Clean Up**: Reacting to concrete surrogate mirrors unlocks your voice. From there, proceed to video recording (`docs/larry/video-production.md`) or companion publishing (`docs/larry/youtube-writing.md`). When finished, say *"I'm good, end the session"* to trigger `bin/pka session-cleanup`, which removes temporary scratch files and verifies your saved deliverables.
 
 **Core paths**:
@@ -157,3 +158,5 @@ Clone on each Mac, run `bootstrap.sh` on each, and push and pull through git. Fi
 - On YouTube: [What If Your Typewriter Gave You a Menu Before You Write?](https://youtu.be/sK6pXStMu0Q)
 - On Substack: [Built for You](https://johnduhring.substack.com/p/built-for-you)
 - On YouTube: [Typewriter Walkthrough](https://youtu.be/ET9Vc8mj8Wk)
+
+After an interview, offer **Map my thinking** alongside the existing artifact choices. Follow [the mindmap procedure](docs/larry/mindmap.md). Draft maps may support explicitly requested exploration; keep their draft label and source version.

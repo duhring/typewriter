@@ -91,3 +91,5 @@ bin/pka session-cleanup [--slug S] [--summary "<summary>"]
 2. Verifies that all created deliverables are mirrored to `~/Downloads/` for immediate double-click access.
 3. Optionally logs a durable closeout entry in `owners-inbox/session-logs/`.
 4. Returns a clean completion status.
+
+After an interview, offer **Map my thinking** alongside the existing artifact choices. Follow [the mindmap procedure](larry/mindmap.md). Draft maps may support explicitly requested exploration; keep their draft label and source version.

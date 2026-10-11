@@ -102,3 +102,5 @@ No new preference store or automatic promotion is introduced. The durable spine 
 - A correction is described and preserved without becoming a global rule.
 - No reflection selects a possibility, advances a gate, or modifies the database.
 - Stopping is a valid choice. Reusable behavior applies only after the user's explicit choice within the recorded scope.
+
+After an interview, offer **Map my thinking** alongside the existing artifact choices. Follow [the mindmap procedure](larry/mindmap.md). Draft maps may support explicitly requested exploration; keep their draft label and source version.
