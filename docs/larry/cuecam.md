@@ -54,6 +54,15 @@ bin/pka cuecam compose ...
 - When the owner dictates in loose natural prose, rewrite it internally into the normalized CueCam spec before calling `tools/cuecam.py compose`
 - Preserve the owner's intent while making the structure explicit: deck defaults first, then one line per card
 - Global defaults may be written as `layout: left|right|lower third|middle` and `images: inline|background`
+- Choose exactly one image role per slide. Generate one asset for that role:
+  background slides use only the background image slot; inline slides use only
+  the inline image slot. Do not assign the same asset to both.
+- Use `images: background` or `images: inline` as the deck default, and prefix
+  individual cards with `background` or `inline` when overriding it.
+- A bare `! filename` in card text is an inline image directive. Never add it
+  to a background card, and do not use plain `Background-` or `Inline-` labels
+  as routing commands. Before delivery, check the slide fields and card text,
+  then confirm the image appears in only the intended slot in CueCam.
 - Natural variants like `Left layout` should be interpreted as defaults too
 - Deck-wide design defaults may also be written as:
 
