@@ -73,6 +73,41 @@ class TestComposeLocally(unittest.TestCase):
         self.assertEqual([c["headline"] for c in payload["cards"]][0], "First point")
         self.assertEqual(len(payload["cards"]), 2)
 
+    def test_compose_image_roles_do_not_duplicate_background_as_inline(self):
+        asset = Path(self.tmp.name) / "art.png"
+        asset.write_bytes(b"fixture image bytes")
+        for mode in ("background", "inline"):
+            with self.subTest(mode=mode):
+                spec = f'Title: Images\nimages: {mode}\n1. "Headline", notes\n'
+                _, _, cards, _, _, errors, _ = self.cuecam.parse_compose_spec(spec, [asset])
+                self.assertFalse(errors)
+                card = cards[0]
+                self.assertEqual(bool(card["slide"]["backgroundImageFilename"]), mode == "background")
+                self.assertEqual(bool(card["slide"]["imageFilename"]), mode == "inline")
+                self.assertEqual("! art.png" in card["text"], mode == "inline")
+                self.assertNotIn("Background-", card["text"])
+                self.assertNotIn("Inline-", card["text"])
+
+    def test_per_card_image_mode_overrides_deck_default(self):
+        assets = [Path(self.tmp.name) / name for name in ("a.png", "b.png")]
+        for asset in assets:
+            asset.write_bytes(b"fixture")
+        spec = 'images: background\n1. "Background", notes\n2. inline "Inline", notes\n'
+        _, _, cards, _, _, errors, _ = self.cuecam.parse_compose_spec(spec, assets)
+        self.assertFalse(errors)
+        self.assertIsNotNone(cards[0]["slide"]["backgroundImageFilename"])
+        self.assertNotIn("! ", cards[0]["text"])
+        self.assertIsNone(cards[1]["slide"]["backgroundImageFilename"])
+        self.assertIn("! b.png", cards[1]["text"])
+
+    def test_card_rejects_both_image_roles(self):
+        for kwargs in ({"bg_image": "a.png", "inline_image": "b.png"},
+                       {"bg_image": "a.png", "text": "# Headline\n! a.png"}):
+            with self.subTest(kwargs=kwargs):
+                values = {"text": "# Headline", **kwargs}
+                with self.assertRaisesRegex(ValueError, "not both"):
+                    self.cuecam._make_card(**values)
+
     def test_spec_file_is_required(self):
         proc = subprocess.run([sys.executable, str(PKA_ROOT / "tools" / "cuecam.py"), "compose", "--preview"],
                               capture_output=True, text=True)

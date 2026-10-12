@@ -233,7 +233,9 @@ def _make_card(
     picture_in_picture=True,
     slide_design=None,
 ):
-    """Create a CueCam card dict."""
+    """Create a CueCam card dict with one image role per slide."""
+    if bg_image and (inline_image or re.search(r"(?m)^\s*!\s+\S+", text)):
+        raise ValueError("Choose background or inline image for a card, not both")
     card = {
         "demoMode": False,
         "ecammSceneTitle": None,
@@ -514,9 +516,9 @@ def _cuecam_text(
         parts.append("# ")
     if notes.strip() and card_kind != "quote":
         parts.append(notes.strip())
-    if image_filename and media_kind == "image":
-        mode_label = "Inline-" if image_mode == "inline" else "Background-"
-        parts.append(mode_label)
+    # A bare ! filename is an inline image directive in CueCam. Backgrounds
+    # belong only in slide.backgroundImageFilename, never in card text.
+    if image_filename and media_kind == "image" and image_mode == "inline":
         parts.append(f"! {image_filename}")
     return "\n".join(parts).strip()
 
