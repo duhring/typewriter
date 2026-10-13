@@ -33,7 +33,9 @@ bin/pka video_project sync-development --slug <slug>
 
 ## Stage 1 — Intake Interview ("expert extraction")
 
-Larry runs the interview directly, one question at a time, mobile-friendly. The goal is to surface what the owner actually thinks, not what he thinks he should say. Draw from this question bank, adapting to the topic; 5–8 questions is typical, stop when the position is clear:
+Larry runs the interview directly, one question at a time, mobile-friendly. Begin with a short, welcoming discovery conversation to understand the owner's idea, experience, and intended outcome. Aim for 3–5 questions, fewer when the owner has already supplied enough context; this is a pacing guide, not a quota. Once the idea can be fairly summarized, offer a read-back and a choice to create an artifact, explore a specific question more deeply, or pause. Do not wait until every claim has been tested. An explicit request for a deep interview or critical review authorizes deeper exploration from the start.
+
+Draw selectively from this bank. Start with experience and purpose; reserve disagreement, limits, and evidence-testing follow-ups for a chosen deeper conversation:
 
 1. What do most people get wrong about this?
 2. What experience caused you to believe that?
@@ -42,13 +44,21 @@ Larry runs the interview directly, one question at a time, mobile-friendly. The 
 5. Who is this for, and what should they be able to *do* afterward? (this becomes the empowerment promise)
 6. What's the one thing viewers must remember if they remember nothing else?
 7. What are you tempted to include that probably doesn't belong?
-8. What's the story or concrete example that proves the point?
+8. What concrete experience supports this, and how far does that example take us?
 
 Rules:
-- One question per turn on Discord. Follow up on interesting answers before moving on.
+- One question per turn on Discord. During discovery, follow up for essential clarity or a concrete experience without systematically testing claims. An interesting answer or an enthusiastic participant does not by itself authorize an extended interview.
+- After the brief read-back, offer a concrete depth invitation grounded in what the owner said: "We have enough to make a useful first draft. We could also explore [specific question or tension]. Would you like to go deeper there, make something from what we have, or pause?" Wait for that choice before deeper probing. If the owner requests an artifact, proceed with it; preserve uncertainty in the artifact.
+- During chosen deeper exploration, assess each answer for consequential ambiguity, a missing concrete example or supporting evidence, an unstated factual assumption or value priority, a plausible alternative explanation, or a missing perspective. Ask the single follow-up most likely to deepen understanding of the chosen issue. Use these as listening habits, not a checklist to complete or categories to announce.
+- Reconstruct the owner's position fairly before challenging it. Use his language and ask with curiosity. Distinguish firsthand experience, interpretation, and broader generalization; missing evidence is an open question, not proof that a claim is false. Explain a reasoning concern through a question rather than labeling a fallacy.
+- During deeper exploration, for broad or causal claims, ask what the audience would need to assess them: a specific case, a comparison, the meaning of a key term or number, an exception, or what else changed. For recommendations, explore the priorities and tradeoffs behind them when material. Do not manufacture objections or force every answer through every check.
+- When an answer is sufficiently developed, move forward. Follow the reply to a probing question; do not repeat a resolved question or turn the interview into an examination. Accept "I don't know" and preserve the uncertainty rather than pushing for certainty.
+- After 3–5 deeper follow-ups, or sooner when the chosen issue is sufficiently explored or the owner signals fatigue, summarize what changed and offer another stopping point: create an artifact, continue on a named question, or pause. Do not silently extend the interview again.
 - Do not suggest answers. Silence and "I don't know" are data — note them.
-- Close by reading back the owner's position in 2–3 sentences and getting a confirm.
+- Close with a brief read-back of the owner's position, its strongest offered support, and any consequential uncertainty still open. Distinguish what the owner reports from what has been independently verified. Invite correction of all three, including the interviewer's own inferences; do not treat an uncorrected summary as confirmation.
 - Save the full Q&A to `interview.md` with a frontmatter block (`category: development-interview`, date, slug, tags).
+
+These question-selection habits adapt the critical-thinking framework in M. Neil Browne and Stuart M. Keeley's *Asking the Right Questions*. Discovery establishes an accurate account; deeper critical examination is an explicit choice. In either mode, distinguish reported experience, inference, and verified facts in resulting artifacts rather than upgrading unsupported claims. The later Challenge Gate remains the detailed claim review; these habits do not add an approval gate or require every uncertainty to be resolved before producing a requested artifact.
 
 ## Stage 1b — The First-Mile Experience: The Artifact Menu
 
@@ -59,11 +69,11 @@ For a new user or a new topic, jumping straight from an interview into a camera 
 3. **Structured Brief** (`brief.md`): Core thesis, key assertions, audience takeaways, and empowerment promise.
 4. **CueCam Presenter Deck** (`.cuecam` bundle via `bin/pka cuecam compose`): A presentation deck ready for recording. Provide the direct download link to [CueCam Presenter](https://cuecam-presenter.com) so the user can install the app when ready.
 5. **Article Draft Seed** (`blog-draft.md`): A text-first draft for creators who think and iterate better through written words.
-6. **Extend the Interview** (*"Want to explore a new angle or clarify your thinking: extend the interview"*): Ask 3–5 deeper follow-up questions to probe alternative perspectives, address counter-arguments, or sharpen the central insight before creating artifacts.
+6. **Extend the Interview** (*"We could explore [specific question] more deeply, if you'd like"*): Only after the owner chooses this direction, ask 3–5 adaptive follow-ups to probe alternative perspectives, address counter-arguments, or sharpen the central insight. Then offer a stopping point. This option is available at the first read-back, before an artifact exists, and after artifact creation.
 
 7. **Map my thinking** (`mindmap.md` + self-contained `mindmap.html`): Expandable themes, examples, tensions and questions, with interview sources. Follow [mindmap.md](mindmap.md).
 
-Present the menu to the user:
+At the first read-back, offer create / explore / pause as described above. When the owner wants artifact choices, present the menu:
 > *"Here are 7 ways to mirror and develop your thoughts. Which would you like to explore first?"*
 
 ### Desktop Access: Mirror Copies to Downloads
