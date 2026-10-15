@@ -9,3 +9,4 @@ google-auth==2.55.1
 google-auth-httplib2==0.4.0
 google-auth-oauthlib==1.4.0
 python-dateutil==2.9.0.post0
+yt-dlp==2026.8.19            # fetch-transcript fallback, watch_video_capture
