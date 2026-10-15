@@ -18,6 +18,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV="$ROOT/discord-bridge/venv"
 
+# Tools bootstrap downloads (ffmpeg, ffprobe, uv) come first on PATH, for the
+# tools and for anything they start (Whisper and HyperFrames call ffmpeg by name).
+export PATH="$ROOT/vendor/bin:$PATH"
+
 usage() { sed -n '2,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; }
 
 # Commands that need no interpreter.
