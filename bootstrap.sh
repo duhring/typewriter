@@ -4,13 +4,14 @@
 #   ./bootstrap.sh                     # core install
 #   ./bootstrap.sh --with-transcribe   # also install local Whisper (pulls torch, ~2 GB);
 #                                      # only needed to transcribe local video files
-#   ./bootstrap.sh --skip-brew         # do not touch Homebrew (you manage ffmpeg yourself)
+#   ./bootstrap.sh --skip-brew         # do not touch Homebrew (only node comes from it now)
+#   ./bootstrap.sh --skip-ffmpeg       # do not download ffmpeg/ffprobe into vendor/bin
 #   ./bootstrap.sh --python PATH       # build the venv from this interpreter instead of
 #                                      # uv's standalone CPython (or set PKA_PYTHON)
 #   PKA_UV=/path/to/uv ./bootstrap.sh  # use this uv instead of finding or downloading one
 #   ./bootstrap.sh --allow-rosetta     # accept an Intel Python on Apple Silicon (not recommended)
 #
-# What it does: Homebrew deps (ffmpeg, node) -> uv + standalone Python -> venv ->
+# What it does: Homebrew deps (node) -> uv + standalone Python -> venv -> ffmpeg ->
 # .env and machine identity -> local SQLite DB -> smoke tests -> report on the
 # optional tools each workflow needs. It installs no model service and needs no
 # model keys: your own assistant does the thinking.
@@ -19,11 +20,12 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-WITH_TRANSCRIBE=0; SKIP_BREW=0; ALLOW_ROSETTA=0; PY_OVERRIDE="${PKA_PYTHON:-}"
+WITH_TRANSCRIBE=0; SKIP_BREW=0; SKIP_FFMPEG=0; ALLOW_ROSETTA=0; PY_OVERRIDE="${PKA_PYTHON:-}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --with-transcribe) WITH_TRANSCRIBE=1 ;;
     --skip-brew) SKIP_BREW=1 ;;
+    --skip-ffmpeg) SKIP_FFMPEG=1 ;;
     --allow-rosetta) ALLOW_ROSETTA=1 ;;
     --python) shift; PY_OVERRIDE="${1:-}"; [ -n "$PY_OVERRIDE" ] || { echo "--python needs a path" >&2; exit 2; } ;;
     *) echo "unknown flag: $1" >&2; exit 2 ;;
@@ -52,6 +54,7 @@ UV_VERSION="0.13.1"   # pinned; bump deliberately, together with the hashes belo
 UV_SHA256_aarch64_apple_darwin="cfe454573412ff7380d15fc7dae5997ab53ffce72fce0a78e91ddbc84001acd2"
 UV_SHA256_x86_64_apple_darwin="bb7b805bdcf3d0bc8c74ceb94569e6b3e8aa35bd492acdbb9d46bf46d9d4ff6b"
 PY_VERSION="3.13"
+FFMPEG_VERSION="9.0.2"   # pinned static build; hashes in step 3
 
 # Timing: each step and the total, so install changes can be compared.
 T0=$SECONDS; TS=$SECONDS
@@ -59,14 +62,14 @@ step_done() { printf '    (%ss)\n' "$((SECONDS - TS))"; TS=$SECONDS; }
 ROSETTA_FLAG=""; [ "$ALLOW_ROSETTA" = 1 ] && ROSETTA_FLAG="--allow-rosetta"
 
 # 1. Homebrew packages ---------------------------------------------------------
-step "1/6 Homebrew packages"
+step "1/7 Homebrew packages"
 if [ "$SKIP_BREW" = 1 ]; then
   warn "skipped (--skip-brew)"
 elif command -v brew >/dev/null 2>&1; then
   brew bundle --file="$ROOT/Brewfile" --no-upgrade >/dev/null || { fail "Homebrew dependency installation failed"; exit 1; }
   ok "brew bundle satisfied"
 else
-  warn "Homebrew not found: skipped. Python and yt-dlp no longer need it; only ffmpeg (publish and article paths) and node (HyperFrames) come from Homebrew."
+  warn "Homebrew not found: skipped. Python and yt-dlp no longer need it; only node (HyperFrames) comes from Homebrew."
 fi
 step_done
 
@@ -76,7 +79,7 @@ step_done
 # tools are needed. Lookup order: PKA_UV, vendor/bin/uv, uv on PATH, then a
 # pinned, checksum-verified download into vendor/bin (no PATH or shell changes).
 # uv's Python lives in vendor/python, inside this folder.
-step "2/6 Python"
+step "2/7 Python"
 echo "  host: $HOST_ARCH$([ "$ROSETTA_SHELL" = 1 ] && [ "$ALLOW_ROSETTA" = 0 ] && echo ' (this Terminal runs under Rosetta; using native arm64 builds)')"
 
 uv_triple() {
@@ -192,8 +195,66 @@ if [ "$WITH_TRANSCRIBE" = 1 ]; then
 fi
 step_done
 
+# 3. ffmpeg and ffprobe: pinned static builds in vendor/bin ---------------------
+# Static builds from Martin Riedl's build server (https://ffmpeg.martin-riedl.de),
+# release 9.0.2, signed by the builder. Hashes pinned here; the server's .sha256
+# files matched them when pinned. bin/pka puts vendor/bin first on PATH, so tools
+# and anything they start (Whisper, HyperFrames) use these copies.
+step "3/7 ffmpeg"
+if [ "$SKIP_FFMPEG" = 1 ]; then
+  warn "skipped (--skip-ffmpeg); tools will use whatever ffmpeg is on PATH"
+elif [ -x "$ROOT/vendor/bin/ffmpeg" ] && [ -x "$ROOT/vendor/bin/ffprobe" ] \
+     && "$ROOT/vendor/bin/ffmpeg" -hide_banner -version 2>/dev/null | head -1 | grep -q "version $FFMPEG_VERSION"; then
+  ok "ffmpeg $FFMPEG_VERSION already in vendor/bin"
+else
+  case "$(uname -s)-$HOST_ARCH" in
+    Darwin-arm64)  FF_PATH="macos/arm64/1789931890_9.0.2"
+                   FF_SHA_ffmpeg="c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924"
+                   FF_SHA_ffprobe="fcbe839537485eaee7a7a8bc5cbc0f90d53617e80943e8a5b2e31cb851197ea6" ;;
+    Darwin-x86_64) FF_PATH="macos/amd64/1789931006_9.0.2"   # Intel release builds end January 2027
+                   FF_SHA_ffmpeg="7c6b4125b191cbf773832dc51f424cf2b6bb7da43007d1e066f95909e47cacd4"
+                   FF_SHA_ffprobe="2322438ed2f6319a691291b247d09c69dcaa3a982460d1f269a7e1af335cfdfd" ;;
+    Linux-x86_64)  FF_PATH="linux/amd64/1789931100_9.0.2"   # development and CI
+                   FF_SHA_ffmpeg="fa8ecf4abbd290d98f7d188b8649cc6b391ae209a98452be955a15aab1909d7f"
+                   FF_SHA_ffprobe="3f428c49070be3d24ec338602b76d412e401ffcb8a5641ef0e729181a232fc32" ;;
+    *)             FF_PATH="" ;;
+  esac
+  if [ -z "$FF_PATH" ]; then
+    warn "no pinned ffmpeg build for $(uname -s) $HOST_ARCH; install ffmpeg yourself (publish and article paths need it)"
+  else
+    tmp="$(mktemp -d)"; ff_ok=1
+    for f in ffmpeg ffprobe; do
+      url="https://ffmpeg.martin-riedl.de/download/$FF_PATH/$f.zip"
+      sha_var="FF_SHA_$f"
+      if ! curl -fsSL "$url" -o "$tmp/$f.zip"; then
+        fail "could not download $f ($url)"; ff_ok=0; break
+      fi
+      if [ "$(sha256_of "$tmp/$f.zip")" != "${!sha_var}" ]; then
+        rm -rf "$tmp"; fail "$f download failed its pinned checksum ($url)"; exit 1
+      fi
+      "$VENV/bin/python3" -m zipfile -e "$tmp/$f.zip" "$tmp/$f.d" || { fail "could not unpack $f.zip"; ff_ok=0; break; }
+    done
+    if [ "$ff_ok" = 1 ]; then
+      mkdir -p "$ROOT/vendor/bin"
+      for f in ffmpeg ffprobe; do cp "$tmp/$f.d/$f" "$ROOT/vendor/bin/$f"; chmod 755 "$ROOT/vendor/bin/$f"; done
+      rm -rf "$tmp"
+      if "$ROOT/vendor/bin/ffmpeg" -hide_banner -version >/dev/null 2>&1 && "$ROOT/vendor/bin/ffprobe" -hide_banner -version >/dev/null 2>&1; then
+        ok "ffmpeg and ffprobe $FFMPEG_VERSION installed in vendor/bin"
+      else
+        fail "the downloaded ffmpeg does not run on this Mac"; exit 1
+      fi
+    else
+      rm -rf "$tmp"
+      warn "ffmpeg not installed. Interview -> CueCam works without it; re-run ./bootstrap.sh when online, or pass --skip-ffmpeg and use your own."
+    fi
+  fi
+fi
+step_done
+# The smoke tests below, like bin/pka, see vendor/bin first.
+export PATH="$ROOT/vendor/bin:$PATH"
+
 # 3. Secrets and machine identity --------------------------------------------
-step "3/6 Configuration"
+step "4/7 Configuration"
 if [ ! -f discord-bridge/.env ]; then
   cp discord-bridge/.env.example discord-bridge/.env
   ok "created discord-bridge/.env from the example (only needed for Discord or YouTube upload)"
@@ -214,13 +275,13 @@ fi
 step_done
 
 # 4. Local database -------------------------------------------------------------
-step "4/6 Local SQLite database"
+step "5/7 Local SQLite database"
 "$VENV/bin/python3" tools/pka_db.py init >/dev/null || { fail "Database initialization failed"; exit 1; }
 ok "data/pka.db initialized (idempotent)"
 step_done
 
 # 5. Smoke tests --------------------------------------------------------------
-step "5/6 Smoke tests"
+step "6/7 Smoke tests"
 if "$VENV/bin/python3" -m unittest discover -s tests -q >/tmp/pka-bootstrap-tests.log 2>&1; then
   ok "tests pass ($(grep -aoE 'Ran [0-9]+ tests' /tmp/pka-bootstrap-tests.log))"
 else
@@ -230,7 +291,7 @@ fi
 step_done
 
 # 6. Optional tools, by the workflow that needs them ---------------------------
-step "6/6 Optional tools"
+step "7/7 Optional tools"
 echo "  Your assistant: any AI assistant that can read files and run commands in this directory"
 echo "  (Claude Code, Codex, or another). It uses bin/pka to run the tools."
 if command -v claude >/dev/null || command -v codex >/dev/null; then
@@ -238,7 +299,7 @@ if command -v claude >/dev/null || command -v codex >/dev/null; then
 else
   warn "no assistant CLI found on PATH. A browser-only assistant also works; you then run bin/pka commands yourself."
 fi
-command -v ffmpeg >/dev/null && ok "ffmpeg found" \
+{ [ -x "$ROOT/vendor/bin/ffmpeg" ] || command -v ffmpeg >/dev/null; } && ok "ffmpeg found$([ -x "$ROOT/vendor/bin/ffmpeg" ] && echo ' (vendor/bin)')" \
   || warn "ffmpeg not found: needed by the publish and article paths (clean, QC, local transcription). Not needed for interview -> CueCam."
 { [ -x "$VENV/bin/yt-dlp" ] || command -v yt-dlp >/dev/null; } && ok "yt-dlp found" \
   || warn "yt-dlp not found: transcript fallback for YouTube sources on the article path."

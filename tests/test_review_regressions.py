@@ -120,6 +120,7 @@ exit 0
                 for path in (fake, uv, brew): path.chmod(0o755)
                 env = dict(os.environ, PKA_TEST_FAIL=failure, PKA_UV=str(uv), PATH=str(root)+os.pathsep+os.environ['PATH'])
                 args = ['bash', str(root/'bootstrap.sh'), '--python', str(fake)]
+                args.append('--skip-ffmpeg')
                 if failure != 'brew': args.append('--skip-brew')
                 if failure == 'whisper': args.append('--with-transcribe')
                 result = subprocess.run(args, env=env, capture_output=True, text=True)
@@ -128,3 +129,12 @@ exit 0
                 expected = {'brew': 'Homebrew dependency installation failed', 'requirements': 'Python dependency installation failed',
                             'whisper': 'Whisper installation failed', 'database': 'Database initialization failed', 'tests': 'tests failed'}
                 self.assertIn(expected[failure], result.stdout)
+
+
+class LauncherPath(unittest.TestCase):
+    def test_pka_puts_vendor_bin_first_on_path(self):
+        root = Path(__file__).resolve().parents[1]
+        env = dict(os.environ, PKA_PYTHON=sys.executable)
+        out = subprocess.run([str(root / 'bin' / 'pka'), 'python', '-c', 'import os; print(os.environ["PATH"].split(os.pathsep)[0])'],
+                             env=env, capture_output=True, text=True, check=True).stdout.strip()
+        self.assertEqual(out, str(root / 'vendor' / 'bin'))
