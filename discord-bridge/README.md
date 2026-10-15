@@ -74,12 +74,11 @@ LARRY_CHANNEL_ID=123456789012345678
 
 ### 7. Install Python dependencies
 
+From the repository root, `./bootstrap.sh` builds `discord-bridge/venv` (Python 3.13 via uv, with pip included). To add the bridge's own requirements afterwards:
+
 ```bash
-python3.11 -m venv venv
 ./venv/bin/pip install -r requirements.txt
 ```
-
-Python 3.11+ is recommended for the bridge and Google tools.
 
 ### 8. Run the bot
 

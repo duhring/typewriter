@@ -88,10 +88,26 @@ def macho_archs(path: Path | str) -> list[str]:
 
 
 def host_arch() -> str:
+    """The machine's real architecture.
+
+    Inside a Rosetta process (a Rosetta Terminal, or arch -x86_64) child
+    processes inherit the x86_64 preference, so uname -m says x86_64 even on
+    Apple Silicon. Then ask the hardware. hw.optional.arm64, not
+    sysctl.proc_translated: a native Python is not itself translated.
+    """
     try:
-        return subprocess.check_output(["uname", "-m"], text=True).strip()
+        machine = subprocess.check_output(["uname", "-m"], text=True).strip()
     except (OSError, subprocess.CalledProcessError):
-        return platform.machine()
+        machine = platform.machine()
+    if sys.platform == "darwin" and machine == "x86_64":
+        try:
+            if subprocess.check_output(
+                ["sysctl", "-n", "hw.optional.arm64"], text=True, stderr=subprocess.DEVNULL
+            ).strip() == "1":
+                return "arm64"
+        except (OSError, subprocess.CalledProcessError):
+            pass
+    return machine
 
 
 def toolchain_clang() -> Path | None:
@@ -230,7 +246,7 @@ def render(report: dict) -> str:
     if tc["clang"]:
         lines.append(f"toolchain: {tc['clang']} ({', '.join(tc['archs']) or 'unknown arch'})")
     else:
-        lines.append("toolchain: no clang found (xcode-select --install)")
+        lines.append("toolchain: no clang found (fine: bootstrap installs prebuilt packages; xcode-select --install only if you build from source)")
     if report["venv"]:
         v = report["venv"]
         lines.append(f"venv: {v['path']} (base {v['home'] or '?'}, {'present' if v['base_exists'] else 'MISSING'})")

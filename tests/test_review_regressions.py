@@ -99,14 +99,17 @@ class BootstrapFailures(unittest.TestCase):
 case "$*" in
   *env_check.py*) echo 'version: 3.13.0'; exit 0;;
   --version) echo 'Python 3.13.0'; exit 0;;
-  '-m venv '*) mkdir -p "$3/bin"; cp "$0" "$3/bin/python3"; cp "$(dirname "$0")/pip" "$3/bin/pip"; exit 0;;
   *pka_db.py*) [ "$PKA_TEST_FAIL" != database ]; exit $?;;
   *unittest*) [ "$PKA_TEST_FAIL" != tests ] || exit 23; echo 'Ran 1 tests'; exit 0;;
 esac
 exit 0
 ''')
-                pip = root / 'pip'
-                pip.write_text('''#!/bin/bash
+                uv = root / 'uv'
+                uv.write_text('''#!/bin/bash
+case "$1" in
+  --version) echo 'uv 0.0.0-test'; exit 0;;
+  venv) for last; do :; done; mkdir -p "$last/bin"; cp "$(dirname "$0")/python" "$last/bin/python3"; exit 0;;
+esac
 case "$*" in
   *requirements-transcribe.txt*) [ "$PKA_TEST_FAIL" != whisper ]; exit $?;;
   *requirements.txt*) [ "$PKA_TEST_FAIL" != requirements ]; exit $?;;
@@ -114,8 +117,8 @@ esac
 exit 0
 ''')
                 brew = root / 'brew'; brew.write_text('#!/bin/bash\nexit 23\n')
-                for path in (fake, pip, brew): path.chmod(0o755)
-                env = dict(os.environ, PKA_TEST_FAIL=failure, PATH=str(root)+os.pathsep+os.environ['PATH'])
+                for path in (fake, uv, brew): path.chmod(0o755)
+                env = dict(os.environ, PKA_TEST_FAIL=failure, PKA_UV=str(uv), PATH=str(root)+os.pathsep+os.environ['PATH'])
                 args = ['bash', str(root/'bootstrap.sh'), '--python', str(fake)]
                 if failure != 'brew': args.append('--skip-brew')
                 if failure == 'whisper': args.append('--with-transcribe')

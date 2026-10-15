@@ -5,6 +5,9 @@
 # Virtualenvs and bytecode
 venv/
 discord-bridge/venv*/
+
+# Tools bootstrap downloads (uv, its standalone Python)
+vendor/
 **/__pycache__/
 *.pyc
 

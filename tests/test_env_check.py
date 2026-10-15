@@ -209,3 +209,30 @@ class TestCLI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestHostArchUnderRosetta(unittest.TestCase):
+    """uname -m says x86_64 in a Rosetta process; the hardware says arm64."""
+
+    def _run(self, platform_name, outputs):
+        from unittest import mock
+        def fake(cmd, **kwargs):
+            out = outputs.get(cmd[0])
+            if isinstance(out, Exception):
+                raise out
+            return out
+        with mock.patch.object(env_check.sys, "platform", platform_name), \
+             mock.patch.object(env_check.subprocess, "check_output", side_effect=fake):
+            return env_check.host_arch()
+
+    def test_rosetta_on_apple_silicon_reports_arm64(self):
+        self.assertEqual(self._run("darwin", {"uname": "x86_64\n", "sysctl": "1\n"}), "arm64")
+
+    def test_intel_mac_stays_x86_64(self):
+        self.assertEqual(self._run("darwin", {"uname": "x86_64\n", "sysctl": "0\n"}), "x86_64")
+        missing = env_check.subprocess.CalledProcessError(1, "sysctl")
+        self.assertEqual(self._run("darwin", {"uname": "x86_64\n", "sysctl": missing}), "x86_64")
+
+    def test_native_and_linux_untouched(self):
+        self.assertEqual(self._run("darwin", {"uname": "arm64\n"}), "arm64")
+        self.assertEqual(self._run("linux", {"uname": "x86_64\n", "sysctl": "1\n"}), "x86_64")
