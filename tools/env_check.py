@@ -90,21 +90,24 @@ def macho_archs(path: Path | str) -> list[str]:
 def host_arch() -> str:
     """The machine's real architecture.
 
-    uname -m reports x86_64 inside a Rosetta process (a Terminal started under
-    Rosetta, or anything run with arch -x86_64), even on Apple Silicon, so on
-    macOS ask the hardware first.
+    Inside a Rosetta process (a Rosetta Terminal, or arch -x86_64) child
+    processes inherit the x86_64 preference, so uname -m says x86_64 even on
+    Apple Silicon. Then ask the hardware. hw.optional.arm64, not
+    sysctl.proc_translated: a native Python is not itself translated.
     """
-    if sys.platform == "darwin":
+    try:
+        machine = subprocess.check_output(["uname", "-m"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        machine = platform.machine()
+    if sys.platform == "darwin" and machine == "x86_64":
         try:
-            out = subprocess.check_output(["sysctl", "-n", "hw.optional.arm64"], text=True, stderr=subprocess.DEVNULL).strip()
-            if out == "1":
+            if subprocess.check_output(
+                ["sysctl", "-n", "hw.optional.arm64"], text=True, stderr=subprocess.DEVNULL
+            ).strip() == "1":
                 return "arm64"
         except (OSError, subprocess.CalledProcessError):
             pass
-    try:
-        return subprocess.check_output(["uname", "-m"], text=True).strip()
-    except (OSError, subprocess.CalledProcessError):
-        return platform.machine()
+    return machine
 
 
 def toolchain_clang() -> Path | None:
