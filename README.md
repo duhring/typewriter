@@ -41,7 +41,7 @@ Paste this into Terminal:
 curl -fsSL https://raw.githubusercontent.com/duhring/typewriter/main/install.sh | bash
 ```
 
-It checks for git, clones Typewriter into `~/Typewriter` (so updates can use git later), and runs `./bootstrap.sh` there. It never overwrites an existing folder: an existing Typewriter clone is reused, anything else stops the install with nothing changed. Options go after `bash -s --`, for example `| bash -s -- --dir ~/PKA --with-transcribe`; `--dir` picks the folder, `--ref` a branch or tag, `--no-bootstrap` clones only, and any other option is passed to bootstrap. On a brand-new Mac without git, it tells you to run `xcode-select --install` first.
+It checks for git, clones Typewriter into `~/Typewriter` (so updates can use git later), and runs `./bootstrap.sh` there. It never overwrites an existing folder: an existing Typewriter clone is reused, anything else stops the install with nothing changed. Options go after `bash -s --`, for example `| bash -s -- --dir ~/PKA --with-transcribe`; `--dir` picks the folder, `--ref` a branch or tag, `--no-bootstrap` clones only, `--tarball` installs the latest release without git (updated later with `bin/pka update`; see [the update procedure](docs/updating-typewriter.md)), and any other option is passed to bootstrap. On a brand-new Mac without git, it tells you to run `xcode-select --install` first.
 
 Or do the same by hand:
 
