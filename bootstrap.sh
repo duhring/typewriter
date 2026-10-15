@@ -90,11 +90,23 @@ uv_triple() {
 }
 sha256_of() { if command -v shasum >/dev/null 2>&1; then shasum -a 256 "$1"; else sha256sum "$1"; fi | awk '{print $1}'; }
 
+# A uv already on PATH is used only if it is at least the pinned version;
+# older ones lack flags this script relies on (seen: 0.5.24 in ~/.local/bin).
+uv_new_enough() {
+  local have; have="$("$1" --version 2>/dev/null | awk '{print $2}')" || return 1
+  [ -n "$have" ] || return 1
+  awk -v a="$have" -v b="$UV_VERSION" 'BEGIN { split(a, x, /[.-]/); split(b, y, /[.-]/)
+    for (i = 1; i <= 3; i++) { if (x[i] + 0 > y[i] + 0) exit 0; if (x[i] + 0 < y[i] + 0) exit 1 } exit 0 }'
+}
+
 UV=""
 if [ -n "${PKA_UV:-}" ]; then UV="$PKA_UV"
 elif [ -x "$ROOT/vendor/bin/uv" ]; then UV="$ROOT/vendor/bin/uv"
-elif command -v uv >/dev/null 2>&1; then UV="$(command -v uv)"
+elif command -v uv >/dev/null 2>&1 && uv_new_enough "$(command -v uv)"; then UV="$(command -v uv)"
 else
+  if command -v uv >/dev/null 2>&1; then
+    warn "uv on PATH ($(command -v uv), $(uv --version 2>/dev/null | awk '{print $2}')) is older than $UV_VERSION; leaving it alone and using a pinned copy in vendor/bin"
+  fi
   UV_TRIPLE="$(uv_triple)" || { fail "no uv build for $(uname -s) $HOST_ARCH; install uv yourself (https://docs.astral.sh/uv/) and re-run"; exit 1; }
   UV_URL="https://github.com/astral-sh/uv/releases/download/$UV_VERSION/uv-$UV_TRIPLE.tar.gz"
   tmp="$(mktemp -d)"
@@ -135,9 +147,9 @@ if [ -n "$PY_OVERRIDE" ]; then
   UV_PY_ARGS=(--python "$PY_OVERRIDE")
 else
   case "$(uname -s)-$HOST_ARCH" in
-    Darwin-arm64)  UV_PY_ARGS=(--python "cpython-$PY_VERSION-macos-aarch64" --managed-python) ;;
-    Darwin-x86_64) UV_PY_ARGS=(--python "cpython-$PY_VERSION-macos-x86_64" --managed-python) ;;
-    *)             UV_PY_ARGS=(--python "$PY_VERSION" --managed-python) ;;
+    Darwin-arm64)  UV_PY_ARGS=(--python "cpython-$PY_VERSION-macos-aarch64" --python-preference only-managed) ;;
+    Darwin-x86_64) UV_PY_ARGS=(--python "cpython-$PY_VERSION-macos-x86_64" --python-preference only-managed) ;;
+    *)             UV_PY_ARGS=(--python "$PY_VERSION" --python-preference only-managed) ;;
   esac
 fi
 
