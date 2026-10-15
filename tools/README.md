@@ -11,6 +11,8 @@ One line per tool, grouped by domain. Run everything with `bin/pka <name>` (the 
 | `transcribe.py` | Whisper transcription of local audio/video |
 | `fetch-transcript.py` | Fetch transcript from a YouTube URL/ID or local file (legacy hyphen name — keep for compatibility) |
 | `video_project.py` | Manual-first video state, artifact identities, approvals, publication, and metrics |
+| `update.py` | Update a tarball installation: `status`, `check`, `fetch` (verify and plan, changes nothing), `apply --yes` (back up, then replace only files you did not change) |
+| `build_release.py` | Build a release tarball with VERSION and MANIFEST.sha256 (run by `.github/workflows/release.yml` on v* tags) |
 | `video_qc.py` | Final-master technical QC plus indexed human-review checklist |
 | `pipeline.py` | Approved master -> package and chapter-review handoffs -> private upload; no one-shot path |
 | `publish_to_youtube.py` | Upload video using a Maven package .md for metadata |

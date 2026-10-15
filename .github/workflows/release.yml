@@ -1,0 +1,27 @@
+# Build a release tarball for every v* tag and attach it to a GitHub release.
+# The tarball carries VERSION and MANIFEST.sha256, which bin/pka update uses
+# to tell shipped files from files the owner changed.
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Unit tests
+        run: |
+          python3 -m pip install --quiet -r requirements.txt
+          python3 -m unittest discover -s tests -q
+      - name: Build tarball
+        run: python3 tools/build_release.py --version "${GITHUB_REF_NAME}" --ref "${GITHUB_SHA}" --out dist
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/* --title "Typewriter ${GITHUB_REF_NAME}" --generate-notes

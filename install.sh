@@ -10,6 +10,8 @@
 #   --dir PATH        where to put Typewriter (default: ~/Typewriter, or $TYPEWRITER_DIR)
 #   --ref NAME        branch or tag to clone (default: main)
 #   --no-bootstrap    clone only; run ./bootstrap.sh yourself later
+#   --tarball         install the latest release tarball instead of cloning (no git needed;
+#                     update later with: bin/pka update fetch, then apply)
 #   anything else     passed through to ./bootstrap.sh (--with-transcribe, --skip-brew, ...)
 #
 # What it does: checks for git, clones the repository (so later updates can use
@@ -24,7 +26,8 @@ set -euo pipefail
 main() {
   local repo="${TYPEWRITER_REPO:-https://github.com/duhring/typewriter.git}"
   local dir="${TYPEWRITER_DIR:-$HOME/Typewriter}"
-  local ref="main" run_bootstrap=1
+  local ref="main" run_bootstrap=1 tarball=0
+  local slug="${TYPEWRITER_SLUG:-duhring/typewriter}"
   local passthrough=()
 
   while [ $# -gt 0 ]; do
@@ -32,6 +35,7 @@ main() {
       --dir) shift; dir="${1:?--dir needs a path}" ;;
       --ref) shift; ref="${1:?--ref needs a branch or tag}" ;;
       --no-bootstrap) run_bootstrap=0 ;;
+      --tarball) tarball=1 ;;
       *) passthrough+=("$1") ;;
     esac
     shift
@@ -51,7 +55,9 @@ main() {
 
   # git. On a new Mac, /usr/bin/git is a stub that asks to install the Command
   # Line Tools; check for a working git before relying on it.
-  if ! git --version >/dev/null 2>&1; then
+  if [ "$tarball" = 1 ]; then
+    :
+  elif ! git --version >/dev/null 2>&1; then
     fail "git is not installed."
     if [ "$(uname -s)" = Darwin ]; then
       echo "  Install Apple's Command Line Tools (a system dialog opens), then run this command again:" >&2
@@ -59,17 +65,33 @@ main() {
     fi
     exit 1
   fi
-  ok "git: $(git --version | awk '{print $3}')"
+  [ "$tarball" = 1 ] || ok "git: $(git --version | awk '{print $3}')"
 
   # Target folder: reuse an existing Typewriter clone, never touch anything else.
   if [ -e "$dir" ]; then
-    if [ -f "$dir/bootstrap.sh" ] && [ -f "$dir/AGENTS.md" ] && git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; then
+    if [ -f "$dir/bootstrap.sh" ] && [ -f "$dir/AGENTS.md" ] && { [ -f "$dir/MANIFEST.sha256" ] || git -C "$dir" rev-parse --git-dir >/dev/null 2>&1; }; then
       ok "Typewriter already at $dir; not cloning again (updates: say \"Update my Typewriter\" to your assistant)"
     else
       fail "$dir already exists and is not a Typewriter clone. Nothing was changed."
       echo "  Choose another folder: ... | bash -s -- --dir ~/somewhere-else" >&2
       exit 1
     fi
+  elif [ "$tarball" = 1 ]; then
+    # Latest release tag from the redirect of /releases/latest; no API or jq needed.
+    local tag url tmp want have
+    tag="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/$slug/releases/latest" | sed 's|.*/tag/||')"
+    case "$tag" in v*) ;; *) fail "could not find the latest release of $slug"; exit 1 ;; esac
+    url="https://github.com/$slug/releases/download/$tag/typewriter-$tag.tar.gz"
+    tmp="$(mktemp -d)"
+    curl -fsSL "$url" -o "$tmp/t.tar.gz" && curl -fsSL "$url.sha256" -o "$tmp/t.sha256" \
+      || { rm -rf "$tmp"; fail "could not download $url"; exit 1; }
+    want="$(awk '{print $1}' "$tmp/t.sha256")"
+    have="$( (shasum -a 256 "$tmp/t.tar.gz" 2>/dev/null || sha256sum "$tmp/t.tar.gz") | awk '{print $1}')"
+    [ -n "$want" ] && [ "$want" = "$have" ] || { rm -rf "$tmp"; fail "release tarball failed its checksum"; exit 1; }
+    mkdir -p "$dir"
+    tar -xzf "$tmp/t.tar.gz" -C "$dir" --strip-components 1 || { rm -rf "$tmp"; fail "could not unpack the release"; exit 1; }
+    rm -rf "$tmp"
+    ok "installed release $tag into $dir (update later: bin/pka update fetch, then bin/pka update apply --yes)"
   else
     mkdir -p "$(dirname "$dir")"
     git clone --quiet --branch "$ref" "$repo" "$dir" || { fail "could not clone $repo ($ref)"; exit 1; }

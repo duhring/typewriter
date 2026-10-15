@@ -49,6 +49,16 @@ For a clean starter clone on its expected branch with no divergent commits, a re
 
 Prepare the integration in a separate checkout. For each conflicting system file, carry local customizations forward deliberately and inspect the merged result. Use the installed baseline when available for a three-way comparison. Do not infer an unknown baseline. Preserve owner-authored instructions; a conflict that changes their meaning needs the owner's decision on the concrete alternatives. Never use hard reset, force push, destructive cleanup or an automatic stash to get past local differences.
 
+## Tarball installations
+
+An installation made with `install.sh --tarball` has `VERSION` and `MANIFEST.sha256` instead of Git history. For it, `bin/pka update` carries out the steps above mechanically:
+
+1. `bin/pka update status` shows the installed version and which shipped system files the owner changed.
+2. `bin/pka update fetch` downloads the latest release, checks it against the release's `.sha256` file, unpacks it into `data/tmp/update/`, and prints a plan. It changes nothing. The plan replaces only files the owner did not change, adds new files where nothing exists, keeps the owner's changes, lists files changed on both sides as conflicts, and leaves files dropped upstream in place. `data/`, the inboxes, `vendor/`, the environment and machine identity are never written.
+3. Show the owner the plan. Conflicts need the owner's decision on the concrete alternatives, as above.
+4. With the owner's approval, `bin/pka update apply --yes` backs up every file it will replace, the old manifest and the database (through `backup_pka_db`) to `~/Typewriter-backups/update-<timestamp>/`, writes the files, runs the unit tests, and saves an indexed receipt in `owners-inbox/setup-notes/`. The release's copies of conflicting files are in the backup for a deliberate merge.
+5. If the receipt says requirements or bootstrap changed, run `./bootstrap.sh`.
+
 ## Verify, apply, and leave a receipt
 
 Run checks appropriate to the changed files in the staged integration. Use `bin/pka check` and `bin/pka test` when system code or its runtime changes. Run `tests/acceptance/all.sh` only in a disposable checkout: it creates fixture projects and approval records and must not be run against the user's live database. Update dependencies through the documented installer only when the change requires it; do not rebuild a working environment merely to refresh documentation.
