@@ -35,6 +35,8 @@ from pathlib import Path
 
 PKA_ROOT = Path(__file__).resolve().parent.parent
 TOOLS_DIR = PKA_ROOT / "tools"
+sys.path.insert(0, str(TOOLS_DIR))
+import node_runtime  # noqa: E402  (Node >= 22 on PATH, or fetched into vendor/node)
 VENV_PYTHON = PKA_ROOT / "discord-bridge" / "venv" / "bin" / "python3"
 JOBS_FILE = PKA_ROOT / "data" / "render_jobs.json"
 TASKS_DIR = PKA_ROOT / "owners-inbox" / "tasks"
@@ -142,7 +144,7 @@ def _lint_and_validate_project(hf_dir: Path, cp: Path) -> None:
     """
     # 1. Run static lint
     r_lint = subprocess.run(
-        ["npx", "--yes", "hyperframes", "lint", "--json"],
+        [node_runtime.npx(), "--yes", "hyperframes", "lint", "--json"],
         cwd=str(hf_dir),
         capture_output=True, text=True,
     )
@@ -184,7 +186,7 @@ def _lint_and_validate_project(hf_dir: Path, cp: Path) -> None:
 
     # 2. Run dynamic validate
     r_val = subprocess.run(
-        ["npx", "--yes", "hyperframes", "validate", "--json", "--timeout", "10000"],
+        [node_runtime.npx(), "--yes", "hyperframes", "validate", "--json", "--timeout", "10000"],
         cwd=str(hf_dir),
         capture_output=True, text=True,
     )
@@ -330,7 +332,7 @@ def _run_worker(slug: str, job_id: str) -> int:
         # ── Step 5: npx hyperframes render ──
         render_start = time.time()
         r = subprocess.run(
-            ["npx", "--yes", "hyperframes", "render"],
+            [node_runtime.npx(), "--yes", "hyperframes", "render"],
             cwd=str(hf_dir),
             capture_output=True, text=True,
             timeout=600,  # 10 min max

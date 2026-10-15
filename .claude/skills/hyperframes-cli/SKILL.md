@@ -5,7 +5,7 @@ description: HyperFrames CLI tool — hyperframes init, lint, inspect, preview, 
 
 # HyperFrames CLI
 
-Everything runs through `npx hyperframes`. Requires Node.js >= 22 and FFmpeg.
+Everything runs through `npx hyperframes`. Requires Node.js >= 22 and FFmpeg. In a Typewriter folder without Node, use `bin/pka npx hyperframes ...` instead: it fetches pinned Node into `vendor/node/` on first use, and `bin/pka` already puts the vendored ffmpeg on PATH.
 
 ## Workflow
 

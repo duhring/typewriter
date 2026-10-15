@@ -110,7 +110,7 @@ The trial is evidence of one working Mac setup, not universal hardware coverage.
 | Keys in `discord-bridge/.env` (optional) | Discord posting only. No model keys: your assistant does the thinking, and thumbnails are artwork you supply | `discord-bridge/README.md` |
 | Google Cloud OAuth client | Calendar, Docs, Drive, Sheets, YouTube upload | `tools/GCAL-SETUP.md`, then `tools/auth_doctor.py` |
 | An AI assistant with file and command access | Runs the interviews, analysis, and drafting; calls tools through `bin/pka`. Claude Code reads `CLAUDE.md` and `.claude/`; any other assistant reads `AGENTS.md` | Claude Code: `npm install -g @anthropic-ai/claude-code`; or Codex, or another |
-| Node (HyperFrames, optional) | HTML-based video renders, captions, TTS; tools call `npx --yes hyperframes`. None of the three core paths need it | `Brewfile` installs node |
+| Node (HyperFrames, optional) | HTML-based video renders, captions, TTS; tools call `npx --yes hyperframes`. None of the three core paths need it | Nothing to do: a Node 22+ on PATH is used, otherwise `bin/pka npx` fetches pinned Node into `vendor/node/` on first use |
 | CueCam Presenter | Presenting and recording a deck; live control needs Accessibility and Screen Recording permission. Bundles build without it | https://cuecam-presenter.com |
 | Discord bot (optional) | Chat front-end to the orchestrator | `discord-bridge/README.md` |
 
