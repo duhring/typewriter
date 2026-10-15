@@ -45,7 +45,12 @@ ROSETTA_SHELL=0
 if [ "$HOST_ARCH" = x86_64 ] && [ "$(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0)" = 1 ]; then
   ROSETTA_SHELL=1; [ "$ALLOW_ROSETTA" = 1 ] || HOST_ARCH=arm64
 fi
-UV_VERSION="0.13.1"   # pinned; bump deliberately
+UV_VERSION="0.13.1"   # pinned; bump deliberately, together with the hashes below
+# sha256 of the uv release tarballs, copied from the 0.13.1 GitHub release asset
+# digests. Pinned here so a replaced release file is rejected, not just a
+# corrupted download.
+UV_SHA256_aarch64_apple_darwin="cfe454573412ff7380d15fc7dae5997ab53ffce72fce0a78e91ddbc84001acd2"
+UV_SHA256_x86_64_apple_darwin="bb7b805bdcf3d0bc8c74ceb94569e6b3e8aa35bd492acdbb9d46bf46d9d4ff6b"
 PY_VERSION="3.13"
 
 # Timing: each step and the total, so install changes can be compared.
@@ -93,10 +98,18 @@ else
   UV_TRIPLE="$(uv_triple)" || { fail "no uv build for $(uname -s) $HOST_ARCH; install uv yourself (https://docs.astral.sh/uv/) and re-run"; exit 1; }
   UV_URL="https://github.com/astral-sh/uv/releases/download/$UV_VERSION/uv-$UV_TRIPLE.tar.gz"
   tmp="$(mktemp -d)"
-  if ! curl -fsSL "$UV_URL" -o "$tmp/uv.tar.gz" || ! curl -fsSL "$UV_URL.sha256" -o "$tmp/uv.sha256"; then
+  if ! curl -fsSL "$UV_URL" -o "$tmp/uv.tar.gz"; then
     rm -rf "$tmp"; fail "could not download uv $UV_VERSION ($UV_URL). Check the network, or install uv and re-run."; exit 1
   fi
-  want="$(awk '{print $1}' "$tmp/uv.sha256")"; have="$(sha256_of "$tmp/uv.tar.gz")"
+  pinned_var="UV_SHA256_${UV_TRIPLE//-/_}"
+  want="${!pinned_var:-}"
+  if [ -z "$want" ]; then
+    # No pinned hash for this platform (Linux: development and CI only). Fall
+    # back to the release's .sha256 file, which catches corruption only.
+    warn "no pinned uv hash for $UV_TRIPLE; checking against the release's own .sha256 file"
+    want="$(curl -fsSL "$UV_URL.sha256" | awk '{print $1}')" || want=""
+  fi
+  have="$(sha256_of "$tmp/uv.tar.gz")"
   if [ -z "$want" ] || [ "$want" != "$have" ]; then
     rm -rf "$tmp"; fail "uv download failed its checksum ($UV_URL)"; exit 1
   fi
@@ -153,6 +166,13 @@ fi
 "$UV" pip install --quiet --no-progress --python "$VENV/bin/python3" -r "$ROOT/requirements.txt" \
   || { fail "Python dependency installation failed"; exit 1; }
 ok "requirements installed"
+# yt-dlp has to track YouTube changes, so it is the one package upgraded on
+# every run (Homebrew used to do this). A failed upgrade keeps the installed copy.
+if "$UV" pip install --quiet --no-progress --python "$VENV/bin/python3" --upgrade yt-dlp; then
+  ok "yt-dlp current ($("$VENV/bin/yt-dlp" --version 2>/dev/null || echo unknown))"
+else
+  warn "could not upgrade yt-dlp (offline?); keeping the installed version. Re-run ./bootstrap.sh later."
+fi
 if [ "$WITH_TRANSCRIBE" = 1 ]; then
   "$UV" pip install --quiet --no-progress --python "$VENV/bin/python3" -r "$ROOT/requirements-transcribe.txt" \
     || { fail "Whisper installation failed"; exit 1; }

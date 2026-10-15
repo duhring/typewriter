@@ -230,7 +230,7 @@ def render(report: dict) -> str:
     if tc["clang"]:
         lines.append(f"toolchain: {tc['clang']} ({', '.join(tc['archs']) or 'unknown arch'})")
     else:
-        lines.append("toolchain: no clang found (xcode-select --install)")
+        lines.append("toolchain: no clang found (fine: bootstrap installs prebuilt packages; xcode-select --install only if you build from source)")
     if report["venv"]:
         v = report["venv"]
         lines.append(f"venv: {v['path']} (base {v['home'] or '?'}, {'present' if v['base_exists'] else 'MISSING'})")
