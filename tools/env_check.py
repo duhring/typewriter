@@ -88,6 +88,19 @@ def macho_archs(path: Path | str) -> list[str]:
 
 
 def host_arch() -> str:
+    """The machine's real architecture.
+
+    uname -m reports x86_64 inside a Rosetta process (a Terminal started under
+    Rosetta, or anything run with arch -x86_64), even on Apple Silicon, so on
+    macOS ask the hardware first.
+    """
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.check_output(["sysctl", "-n", "hw.optional.arm64"], text=True, stderr=subprocess.DEVNULL).strip()
+            if out == "1":
+                return "arm64"
+        except (OSError, subprocess.CalledProcessError):
+            pass
     try:
         return subprocess.check_output(["uname", "-m"], text=True).strip()
     except (OSError, subprocess.CalledProcessError):
