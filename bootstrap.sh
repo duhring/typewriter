@@ -4,14 +4,14 @@
 #   ./bootstrap.sh                     # core install
 #   ./bootstrap.sh --with-transcribe   # also install local Whisper (pulls torch, ~2 GB);
 #                                      # only needed to transcribe local video files
-#   ./bootstrap.sh --skip-brew         # do not touch Homebrew (only node comes from it now)
+#   ./bootstrap.sh --skip-brew         # do not touch Homebrew (nothing requires it now)
 #   ./bootstrap.sh --skip-ffmpeg       # do not download ffmpeg/ffprobe into vendor/bin
 #   ./bootstrap.sh --python PATH       # build the venv from this interpreter instead of
 #                                      # uv's standalone CPython (or set PKA_PYTHON)
 #   PKA_UV=/path/to/uv ./bootstrap.sh  # use this uv instead of finding or downloading one
 #   ./bootstrap.sh --allow-rosetta     # accept an Intel Python on Apple Silicon (not recommended)
 #
-# What it does: Homebrew deps (node) -> uv + standalone Python -> venv -> ffmpeg ->
+# What it does: Homebrew deps (none required) -> uv + standalone Python -> venv -> ffmpeg ->
 # .env and machine identity -> local SQLite DB -> smoke tests -> report on the
 # optional tools each workflow needs. It installs no model service and needs no
 # model keys: your own assistant does the thinking.
@@ -69,7 +69,7 @@ elif command -v brew >/dev/null 2>&1; then
   brew bundle --file="$ROOT/Brewfile" --no-upgrade >/dev/null || { fail "Homebrew dependency installation failed"; exit 1; }
   ok "brew bundle satisfied"
 else
-  warn "Homebrew not found: skipped. Python and yt-dlp no longer need it; only node (HyperFrames) comes from Homebrew."
+  warn "Homebrew not found: skipped. Python and yt-dlp no longer need it; nothing else needs Homebrew (Node for HyperFrames is fetched on first use)."
 fi
 step_done
 
@@ -308,8 +308,9 @@ fi
 if [ "$WITH_TRANSCRIBE" = 1 ]; then ok "local Whisper installed (transcribes local video files)"; else
   echo "  - local Whisper not installed: re-run with --with-transcribe if you will transcribe local video files. YouTube captions and supplied transcripts need nothing."
 fi
-command -v node >/dev/null && ok "node found (only HyperFrames renders use it)" \
-  || echo "  - node not found: only needed for HyperFrames renders, which none of the three core paths use."
+if command -v node >/dev/null; then ok "node found (only HyperFrames renders use it)"
+else echo "  - node not found: only HyperFrames renders use it; bin/pka npx fetches Node $( "$VENV/bin/python3" -c 'import sys; sys.path.insert(0, "tools"); import node_runtime; print(node_runtime.NODE_VERSION)' 2>/dev/null) on first use."
+fi
 
 printf '\n  Install time: %dm %02ds\n' "$(( (SECONDS - T0) / 60 ))" "$(( (SECONDS - T0) % 60 ))"
 

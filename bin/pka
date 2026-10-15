@@ -6,6 +6,7 @@
 #   bin/pka test [args...]       run the test suite
 #   bin/pka check                check the environment's Python against this Mac
 #   bin/pka list                 list available tools
+#   bin/pka npx hyperframes ...  npx with Node 22+ (fetched into vendor/node if missing)
 #
 # <tool> is the file name without .py; hyphens and underscores are
 # interchangeable (fetch-transcript, fetch_transcript). Any assistant that can
@@ -57,6 +58,8 @@ case "$cmd" in
     cd "$ROOT" && exec "$PY" "$@" ;;
   test)
     cd "$ROOT" && exec "$PY" -m unittest discover -s tests "$@" ;;
+  node|npx|npm)
+    exec "$PY" "$ROOT/tools/node_runtime.py" exec "$cmd" "$@" ;;
   check)
     cd "$ROOT" && exec "$PY" tools/env_check.py --venv "$VENV" "$@" ;;
   *)
