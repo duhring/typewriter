@@ -38,3 +38,5 @@ Typewriter / PKA is a local-first, markdown-first, SQLite-backed personal knowle
 - `docs/larry/` — Procedure references; load only what the current task needs
 
 The source-of-truth, write-safety, indexing, and command contracts live in [AGENTS.md](AGENTS.md). Do not duplicate them here.
+
+- [Outside-world guidance](docs/larry/outside-world-guidance.md) — Research-informed orientation and owner-reviewed production direction

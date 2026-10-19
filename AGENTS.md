@@ -20,6 +20,10 @@ The three entry points, each with its step-by-step command sequence in `docs/ass
 
 Offer **New idea**, **Continue saved work** (if available), **Check for Typewriter updates**, or **End session**. Follow [docs/updating-typewriter.md](docs/updating-typewriter.md). Never check or install automatically. A specific task takes precedence; mention updates briefly without blocking it. Close immediately when requested.
 
+## Orientation and production direction
+
+Follow [docs/larry/outside-world-guidance.md](docs/larry/outside-world-guidance.md): current market conditions inform the baseline; the creator supplies direction. Preserve the interview brief, document research evidence, and return a proposed production brief for review.
+
 ## Creator handoffs
 
 Follow [docs/possibilities-and-reuse.md](docs/possibilities-and-reuse.md) for artwork feedback, next-step menus, publication links, and explicit reuse. `bin/pka project_reflection --slug S` reports saved-work evidence without selecting, approving, or changing preferences.

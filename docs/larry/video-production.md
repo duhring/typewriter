@@ -90,6 +90,9 @@ bin/pka video_project resolve-blocker --slug <slug> --id <id> \
 
 ## 1. Develop and Approve the Brief
 
+Use [outside-world-guidance.md](outside-world-guidance.md) to establish a current external baseline, preserve the interview brief, and propose production direction grounded in the creator's intent. Keep the material evidence, limitations, and change rationale in the tracked `brief.md`; the existing gate does not separately bind the new supporting research filenames. The owner reviews the proposal through the existing brief process.
+
+
 Follow `docs/larry/development.md` for interview, challenge, outline, balance
 check, and brief creation. Register the standard folder in one pass:
 
@@ -169,6 +172,9 @@ an attached final master, and a passing attached QC report. Owner playback
 approval is still required afterward.
 
 ## 5. Package Without Uploading
+
+Read the reviewed production brief and its outside-world guidance alongside the final-master transcript. Reconcile the intended promise with what the finished video actually delivers, leaving the owner's final title and description wording to their editorial pass. Preserve existing package schemas and timestamp validation; do not imply the current package tool automatically supplies research inputs.
+
 
 The package and its chapter review are two sequential handoffs
 (`docs/handoff-contract.md`), both bound to the final-master transcript and kept
@@ -356,6 +362,8 @@ bin/pka video_project metrics --slug <slug> --window 7d \
 
 YouTube Analytics automation is a later enhancement. The durable metrics shape
 exists now without requiring broader OAuth scopes.
+
+At each available measurement window, compare the production brief's expectations with observed audience response and personal/production value. Record plausible explanations and one proposed next experiment using the existing notes and observation tools. Do not turn adoption surveys, isolated comments, or one successful result into proven consumption trends or permanent preferences.
 
 ## 9. Record Judgment While It Happens
 

@@ -31,6 +31,10 @@ pass, register every artifact that exists in the shared project manifest:
 bin/pka video_project sync-development --slug <slug>
 ```
 
+## Stage 0 — Orientation and outside research
+
+Follow [outside-world-guidance.md](outside-world-guidance.md). When the creator is still finding a direction, explore their situation and values, using current outside research to reveal relevant possibilities. Market conditions provide a baseline; the creator supplies direction. A clear topic can go directly to intake. Preserve the interview baseline in `interview-brief.md`, dated outside evidence in `audience-research.md`, and the synthesized production proposal in the existing `brief.md`. These supporting filenames require normal indexing and are not automatically registered by `sync-development`.
+
 ## Stage 1 — Intake Interview ("expert extraction")
 
 Larry runs the interview directly, one question at a time, mobile-friendly. Begin with a short, welcoming discovery conversation to understand the owner's idea, experience, and intended outcome. Aim for 3–5 questions, fewer when the owner has already supplied enough context; this is a pacing guide, not a quota. Once the idea can be fairly summarized, offer a read-back and a choice to create an artifact, explore a specific question more deeply, or pause. Do not wait until every claim has been tested. An explicit request for a deep interview or critical review authorizes deeper exploration from the start.
@@ -213,7 +217,7 @@ It reports retread risk against the archive (blog, transcripts, briefs, wiki), c
 
 ## Stage 5 — Video Brief
 
-`brief.md` is what the owner takes into the recording session. It bundles:
+`brief.md` is the proposed production brief, combining the preserved interview intent with outside guidance. Follow [outside-world-guidance.md](outside-world-guidance.md): include the decisive dated evidence and limits, proposed changes and rationale, promise-to-content checks, and the owner's finishing role. Bring it back for the owner's response before using it to direct production. Preserve `interview-brief.md`; use existing approval machinery without claiming new supporting-file gate coverage. It bundles:
 
 1. **Empowerment promise** (one or two sentences, up top)
 2. **Outline** (or a pointer to `outline.md`)
@@ -235,7 +239,9 @@ The whole point of the brief is a baseline-vs-after comparison, so every develop
 | Stage | Timestamp | Notes |
 |---|---|---|
 | idea captured | | |
+| orientation / outside baseline | | direction, sources, dates, limits; or not needed |
 | interview done | | # questions, minutes |
+| production direction reviewed | | changes from interview brief, owner response |
 | challenge gate run | | cleared / weakened / proposed drops, overrides |
 | outline done | | |
 | balance check run | | findings accepted/rejected |

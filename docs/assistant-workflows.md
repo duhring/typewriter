@@ -12,12 +12,17 @@ Follow [possibilities-and-reuse.md](possibilities-and-reuse.md) after returning 
 
 When the owner reports publishing, ask for only the missing links: “Would you share the published link so I can connect it to this work?” A Note or announcement link is distinct from an article URL. Record the supplied evidence without assuming the local draft equals the published text or inventing final-version approval.
 
+## Orientation and production direction
+
+Follow [outside-world guidance](larry/outside-world-guidance.md). When the direction is open, use a short orientation conversation and relevant current research before topic intake. Preserve `interview-brief.md`; save dated evidence in `audience-research.md`; synthesize `brief.md` as the proposed production brief. Explain the changes from the original intent and bring the proposal back to the owner before production. Use the existing brief approval; supporting filenames are not automatically attached or separately gate-bound. Keep material evidence in `brief.md`. Explicit requests for a draft or artifact take precedence over extra exploration.
+
 ## Develop: topic to CueCam bundle
 
 Procedure and file formats: `docs/larry/development.md`. Files live in `owners-inbox/development/<slug>/`. Worked example with every response file: `tests/acceptance/develop.sh`.
 
 ```
-(interview the owner; save interview.md)
+(orient with relevant outside research when direction is open; interview the owner; save interview.md)
+(preserve interview-brief.md; save audience-research.md with sources, dates, observations, and limits)
 (first-mile option: present the Artifact Menu — Storyboard, Concept Art, Brief, Deck, Article Seed, or "extend the interview")
 (for each artifact generated, place a duplicate in ~/Downloads/ for double-click preview)
 bin/pka challenge --slug S extract prepare --source owners-inbox/development/S/interview.md
@@ -28,7 +33,7 @@ bin/pka challenge --slug S extract prepare --source owners-inbox/development/S/i
 (write outline.md from cleared claims)
 bin/pka balance_check --slug S prepare --outline owners-inbox/development/S/outline.md
 (write balance-check.analysis.response.json)        bin/pka balance_check --slug S import
-(write brief.md and the card spec)                  bin/pka cuecam compose --spec-file <spec> --title "<title>"
+(propose brief.md using intent + research; owner reviews direction; write the card spec)                  bin/pka cuecam compose --spec-file <spec> --title "<title>"
 bin/pka video_project create --title "<title>" --slug S --entry develop
 bin/pka video_project sync-development --slug S; advance; approve --gate brief; advance; advance;
   attach --kind cuecam_bundle --path <bundle>; approve --gate deck; advance; advance   # -> complete
