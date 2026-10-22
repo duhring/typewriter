@@ -196,7 +196,9 @@ bin/pka pipeline chapter-review import --project <slug>
 ```
 
 An unsupported chapter sends the package back to the assistant: revise it, re-import
-it, and review again. The thumbnail is supplied artwork: attach it with
+it, and review again. Re-importing a corrected package writes a new versioned package
+file and prepares a new chapter-review request; complete that review before package
+approval. The thumbnail is supplied artwork: attach it with
 `bin/pka video_project attach --slug <slug> --kind thumbnail --path <image>`
 (and any reference with `--kind thumbnail_reference --rights "..."`).
 
